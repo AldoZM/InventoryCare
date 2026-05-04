@@ -44,9 +44,10 @@ const STEPS = [
 let _step = 0;
 let _overlay = null;
 let _highlight = null;
+let _key = 'ic_tutorial_done_default';
 
 function _done() {
-  localStorage.setItem('ic_tutorial_done', '1');
+  localStorage.setItem(_key, '1');
   if (_overlay) _overlay.remove();
   if (_highlight) _highlight.remove();
   _overlay = null;
@@ -86,8 +87,9 @@ function _render() {
   document.getElementById('tut-next').textContent = isLast ? 'Finalizar' : 'Continuar →';
 }
 
-export function startTutorial() {
-  if (localStorage.getItem('ic_tutorial_done')) return;
+export function startTutorial(username = 'default') {
+  _key = `ic_tutorial_done_${username}`;
+  if (localStorage.getItem(_key)) return;
 
   _step = 0;
   _overlay = document.createElement('div');

@@ -55,7 +55,7 @@ function guard(title, hash, fn, adminOnly = false) {
 const session = getSession();
 if (session) {
   showApp(session);
-  setTimeout(startTutorial, 400);
+  setTimeout(() => startTutorial(session.username), 400);
 }
 
 // Routes
