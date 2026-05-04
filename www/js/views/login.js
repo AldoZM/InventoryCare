@@ -5,7 +5,7 @@ import { t } from '../i18n.js';
 export function renderLogin(container) {
   container.innerHTML = `
     <div class="login-box">
-      <div class="login-logo">📦 ${t.app.name}</div>
+      <div class="login-logo"><img src="/images/logo.png" alt="${t.app.name}" class="login-logo-img"></div>
       <form id="login-form">
         <div class="form-group">
           <label>${t.login.username}</label>
