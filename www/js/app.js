@@ -73,6 +73,8 @@ addRoute('*', () => navigate(getSession() ? '#/dashboard' : '#/login'));
 initRouter();
 
 window.addEventListener('beforeunload', e => {
+  if (!getSession()) return;
   e.preventDefault();
   e.returnValue = '';
+  return '';
 });
