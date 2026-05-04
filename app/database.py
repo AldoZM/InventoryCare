@@ -1,54 +1,31 @@
-import psycopg2
-import psycopg2.pool
+import sqlite3
+import threading
 from contextlib import contextmanager
 from app.config import settings
 
-_pool = None
+_conn: sqlite3.Connection | None = None
+_lock = threading.Lock()
 
 
-def _conn_kwargs(dbname: str) -> dict:
-    kw = dict(
-        host=settings.db_host,
-        port=settings.db_port,
-        dbname=dbname,
-        user=settings.db_user,
-    )
-    if settings.db_password:
-        kw["password"] = settings.db_password
-    return kw
-
-
-def create_database_if_needed():
-    conn = psycopg2.connect(**_conn_kwargs("postgres"))
-    conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (settings.db_name,))
-        if not cur.fetchone():
-            cur.execute(f'CREATE DATABASE "{settings.db_name}" OWNER "{settings.db_user}"')
-    conn.close()
-
-
-def init_pool():
-    global _pool
-    create_database_if_needed()
-    _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=1,
-        maxconn=10,
-        **_conn_kwargs(settings.db_name),
-    )
+def init_db():
+    global _conn
+    settings.db_path.parent.mkdir(parents=True, exist_ok=True)
+    _conn = sqlite3.connect(str(settings.db_path), check_same_thread=False)
+    _conn.row_factory = sqlite3.Row
+    _conn.execute("PRAGMA journal_mode=WAL")
+    _conn.execute("PRAGMA foreign_keys=ON")
+    _conn.commit()
 
 
 @contextmanager
 def db_conn():
-    conn = _pool.getconn()
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        _pool.putconn(conn)
+    with _lock:
+        try:
+            yield _conn
+            _conn.commit()
+        except Exception:
+            _conn.rollback()
+            raise
 
 
 def get_db():
