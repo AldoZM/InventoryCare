@@ -48,7 +48,7 @@ def health():
 
 # Resolve www/ relative to the exe when frozen, else relative to project root
 if getattr(sys, "frozen", False):
-    _www = Path(sys.executable).parent / "www"
+    _www = Path(sys._MEIPASS) / "www"
 else:
     _www = Path(__file__).parent.parent / "www"
 

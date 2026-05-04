@@ -24,14 +24,23 @@ export function renderLogin(container) {
     e.preventDefault();
     const username = document.getElementById('luser').value.trim();
     const password = document.getElementById('lpass').value;
-    document.getElementById('login-error').classList.add('hidden');
+    const errorEl = document.getElementById('login-error');
+    errorEl.classList.add('hidden');
     try {
-      const data = await api.post('/api/auth/login', { username, password });
-      if (!data) return;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) {
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      const data = await res.json();
       setSession({ token: data.access_token, role: data.role, username });
       window.location.reload();
     } catch {
-      document.getElementById('login-error').classList.remove('hidden');
+      errorEl.classList.remove('hidden');
     }
   });
 }

@@ -3,6 +3,7 @@ import sys
 import threading
 import webbrowser
 import time
+import traceback
 from pathlib import Path
 
 import uvicorn
@@ -12,13 +13,20 @@ import pystray
 PORT = 8080
 URL = f"http://localhost:{PORT}"
 
-# When frozen by PyInstaller, chdir to the exe's folder so relative paths work
-if getattr(sys, "frozen", False):
-    os.chdir(Path(sys.executable).parent)
+# When frozen by PyInstaller, resolve bundle root via _MEIPASS
+_BUNDLE = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
+
+LOG = Path("inventarycare.log")
+LOG.write_text("")  # reset on each launch
+
+
+def _log(msg: str):
+    with LOG.open("a", encoding="utf-8") as f:
+        f.write(msg + "\n")
 
 
 def _load_icon() -> Image.Image:
-    icon_path = Path("assets/icon.ico")
+    icon_path = _BUNDLE / "assets" / "icon.ico"
     if icon_path.exists():
         return Image.open(icon_path)
     # Fallback: generate a minimal blue square
@@ -31,8 +39,14 @@ def _load_icon() -> Image.Image:
 
 
 def _run_server():
-    from app.main import app
-    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="error")
+    try:
+        _log("[server] importing app...")
+        from app.main import app
+        _log("[server] starting uvicorn...")
+        uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="error")
+        _log("[server] uvicorn exited")
+    except Exception:
+        _log("[server] CRASH:\n" + traceback.format_exc())
 
 
 def _open_browser(icon=None, item=None):
@@ -47,8 +61,19 @@ def main():
     server_thread = threading.Thread(target=_run_server, daemon=True)
     server_thread.start()
 
-    # Give uvicorn time to bind the port before opening the browser
-    time.sleep(1.5)
+    # Wait until server responds (up to 15s)
+    import urllib.request, urllib.error
+    for _ in range(30):
+        time.sleep(0.5)
+        try:
+            urllib.request.urlopen(f"http://localhost:{PORT}/health", timeout=1)
+            _log("[launcher] server ready")
+            break
+        except Exception:
+            pass
+    else:
+        _log("[launcher] server never became ready — check inventarycare.log")
+
     webbrowser.open(URL)
 
     menu = pystray.Menu(
