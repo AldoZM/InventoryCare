@@ -41,7 +41,6 @@ def _open_browser(icon=None, item=None):
 
 def _quit(icon, item):
     icon.stop()
-    sys.exit(0)
 
 
 def main():
@@ -58,6 +57,7 @@ def main():
     )
     icon = pystray.Icon("InventaryCare", _load_icon(), "InventaryCare", menu)
     icon.run()
+    sys.exit(0)
 
 
 if __name__ == "__main__":
