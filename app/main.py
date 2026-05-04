@@ -1,9 +1,11 @@
 import os
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.database import init_pool
+from app.database import init_db
 from app.migrations import run_migrations, is_first_run, setup_first_run
 from app.routers import auth as auth_router
 from app.routers import users, products, locations, inventory, movements, reports
@@ -11,7 +13,7 @@ from app.routers import users, products, locations, inventory, movements, report
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_pool()
+    init_db()
     run_migrations()
     if is_first_run():
         setup_first_run()
@@ -35,5 +37,11 @@ def health():
     return {"status": "ok"}
 
 
-if os.path.isfile("www/index.html"):
-    app.mount("/", StaticFiles(directory="www", html=True), name="static")
+# Resolve www/ relative to the exe when frozen, else relative to project root
+if getattr(sys, "frozen", False):
+    _www = Path(sys.executable).parent / "www"
+else:
+    _www = Path(__file__).parent.parent / "www"
+
+if _www.is_dir():
+    app.mount("/", StaticFiles(directory=str(_www), html=True), name="static")
