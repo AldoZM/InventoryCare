@@ -13,12 +13,12 @@ class LoginRequest(BaseModel):
 
 @router.post("/login")
 def login(req: LoginRequest, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT id, username, password_hash, role FROM users WHERE username = %s",
-            (req.username,),
-        )
-        user = cur.fetchone()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, username, password_hash, role FROM users WHERE username = ?",
+        (req.username,),
+    )
+    user = cur.fetchone()
 
     if not user or not verify_password(req.password, user[2]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
