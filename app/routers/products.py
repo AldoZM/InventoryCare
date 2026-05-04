@@ -35,30 +35,30 @@ def list_products(
     conn=Depends(get_db),
     _=Depends(get_current_user),
 ):
-    with conn.cursor() as cur:
-        if search:
-            cur.execute(
-                "SELECT id,sku,name,description,category,unit,min_stock,created_at "
-                "FROM products WHERE name ILIKE %s OR sku ILIKE %s ORDER BY name",
-                (f"%{search}%", f"%{search}%"),
-            )
-        else:
-            cur.execute("SELECT id,sku,name,description,category,unit,min_stock,created_at FROM products ORDER BY name")
-        return [_row_to_dict(r) for r in cur.fetchall()]
+    cur = conn.cursor()
+    if search:
+        cur.execute(
+            "SELECT id,sku,name,description,category,unit,min_stock,created_at "
+            "FROM products WHERE name LIKE ? OR sku LIKE ? ORDER BY name",
+            (f"%{search}%", f"%{search}%"),
+        )
+    else:
+        cur.execute("SELECT id,sku,name,description,category,unit,min_stock,created_at FROM products ORDER BY name")
+    return [_row_to_dict(r) for r in cur.fetchall()]
 
 
 @router.post("", status_code=201)
 def create_product(body: ProductCreate, conn=Depends(get_db), _=Depends(require_admin)):
-    with conn.cursor() as cur:
-        try:
-            cur.execute(
-                "INSERT INTO products (sku,name,description,category,unit,min_stock) "
-                "VALUES (%s,%s,%s,%s,%s,%s) RETURNING id,sku,name,description,category,unit,min_stock,created_at",
-                (body.sku, body.name, body.description, body.category, body.unit, body.min_stock),
-            )
-            return _row_to_dict(cur.fetchone())
-        except Exception:
-            raise HTTPException(409, "SKU already exists")
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO products (sku,name,description,category,unit,min_stock) "
+            "VALUES (?,?,?,?,?,?) RETURNING id,sku,name,description,category,unit,min_stock,created_at",
+            (body.sku, body.name, body.description, body.category, body.unit, body.min_stock),
+        )
+        return _row_to_dict(cur.fetchone())
+    except Exception:
+        raise HTTPException(409, "SKU already exists")
 
 
 @router.put("/{product_id}")
@@ -66,14 +66,14 @@ def update_product(product_id: int, body: ProductUpdate, conn=Depends(get_db), _
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     if not fields:
         raise HTTPException(400, "No fields to update")
-    set_clause = ", ".join(f"{k}=%s" for k in fields)
-    with conn.cursor() as cur:
-        cur.execute(
-            f"UPDATE products SET {set_clause} WHERE id=%s "
-            "RETURNING id,sku,name,description,category,unit,min_stock,created_at",
-            (*fields.values(), product_id),
-        )
-        row = cur.fetchone()
+    set_clause = ", ".join(f"{k}=?" for k in fields)
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE products SET {set_clause} WHERE id=? "
+        "RETURNING id,sku,name,description,category,unit,min_stock,created_at",
+        (*fields.values(), product_id),
+    )
+    row = cur.fetchone()
     if not row:
         raise HTTPException(404, "Product not found")
     return _row_to_dict(row)
@@ -81,7 +81,7 @@ def update_product(product_id: int, body: ProductUpdate, conn=Depends(get_db), _
 
 @router.delete("/{product_id}", status_code=204)
 def delete_product(product_id: int, conn=Depends(get_db), _=Depends(require_admin)):
-    with conn.cursor() as cur:
-        cur.execute("DELETE FROM products WHERE id=%s RETURNING id", (product_id,))
-        if not cur.fetchone():
-            raise HTTPException(404, "Product not found")
+    cur = conn.cursor()
+    cur.execute("DELETE FROM products WHERE id=? RETURNING id", (product_id,))
+    if not cur.fetchone():
+        raise HTTPException(404, "Product not found")

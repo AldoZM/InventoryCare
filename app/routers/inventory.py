@@ -24,16 +24,16 @@ def get_inventory(
     """
     params = []
     if product_id:
-        sql += " AND p.id = %s"
+        sql += " AND p.id = ?"
         params.append(product_id)
     if location_id:
-        sql += " AND l.id = %s"
+        sql += " AND l.id = ?"
         params.append(location_id)
     sql += " ORDER BY p.name, l.code"
 
-    with conn.cursor() as cur:
-        cur.execute(sql, params)
-        rows = cur.fetchall()
+    cur = conn.cursor()
+    cur.execute(sql, params)
+    rows = cur.fetchall()
 
     return [
         {
