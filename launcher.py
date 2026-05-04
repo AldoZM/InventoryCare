@@ -43,7 +43,9 @@ def _run_server():
         _log("[server] importing app...")
         from app.main import app
         _log("[server] starting uvicorn...")
-        uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="error")
+        # Disable uvicorn logging when no console (frozen without console window)
+        log_cfg = None if not sys.stdout or not hasattr(sys.stdout, 'isatty') else "default"
+        uvicorn.run(app, host="0.0.0.0", port=PORT, log_config=log_cfg)
         _log("[server] uvicorn exited")
     except Exception:
         _log("[server] CRASH:\n" + traceback.format_exc())
