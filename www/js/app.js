@@ -1,4 +1,5 @@
 import { getSession, clearSession } from './session.js';
+import { startTutorial } from './tutorial.js';
 import { addRoute, navigate, initRouter } from './router.js';
 import { renderLogin }     from './views/login.js';
 import { renderDashboard } from './views/dashboard.js';
@@ -52,7 +53,10 @@ function guard(title, hash, fn, adminOnly = false) {
 
 // Boot
 const session = getSession();
-if (session) showApp(session);
+if (session) {
+  showApp(session);
+  setTimeout(startTutorial, 400);
+}
 
 // Routes
 addRoute('#/login', () => {
