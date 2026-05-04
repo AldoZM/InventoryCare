@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InventaryCare</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+  <div id="login-page" class="hidden">
+    <div id="login-container"></div>
+  </div>
+
+  <div id="app-shell" class="hidden">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">📦 InventaryCare</span>
+      </div>
+      <nav id="sidebar-nav">
+        <a href="#/dashboard"          data-route="dashboard">  <span class="nav-icon">⊞</span><span class="nav-label">Dashboard</span></a>
+        <a href="#/products"           data-route="products">   <span class="nav-icon">📦</span><span class="nav-label">Productos</span></a>
+        <a href="#/inventory"          data-route="inventory">  <span class="nav-icon">🗺</span><span class="nav-label">Inventario</span></a>
+        <a href="#/movements"          data-route="movements">  <span class="nav-icon">↕</span><span class="nav-label">Movimientos</span></a>
+        <a href="#/history"            data-route="history">    <span class="nav-icon">📋</span><span class="nav-label">Historial</span></a>
+        <a href="#/settings/users"     data-route="users"     class="admin-only hidden"><span class="nav-icon">👥</span><span class="nav-label">Usuarios</span></a>
+        <a href="#/settings/locations" data-route="locations" class="admin-only hidden"><span class="nav-icon">📍</span><span class="nav-label">Ubicaciones</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="sidebar-username-initial" class="user-avatar"></span>
+        <span id="sidebar-user-label" class="nav-label"></span>
+        <button id="logout-btn" class="logout-btn" title="Cerrar sesión">🚪</button>
+      </div>
+    </aside>
+
+    <div id="main-area">
+      <header id="main-header">
+        <h1 id="page-title"></h1>
+        <span id="header-date"></span>
+      </header>
+      <main id="view-container"></main>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

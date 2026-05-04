@@ -1,1 +1,32 @@
 .worktrees/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment — never commit secrets
+.env
+
+# Database
+*.sqlite3
+
+# Superpowers / brainstorm artifacts
+.superpowers/
+
+# C++ legacy (not used)
+build/
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+cmake_install.cmake
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

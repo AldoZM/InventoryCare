@@ -1,0 +1,87 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from typing import Optional
+from app.database import get_db
+from app.auth import get_current_user, require_admin
+
+router = APIRouter(prefix="/api/products", tags=["products"])
+
+
+class ProductCreate(BaseModel):
+    sku: str
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    unit: str = "pcs"
+    min_stock: int = 0
+
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    unit: Optional[str] = None
+    min_stock: Optional[int] = None
+
+
+def _row_to_dict(r):
+    return {"id": r[0], "sku": r[1], "name": r[2], "description": r[3],
+            "category": r[4], "unit": r[5], "min_stock": r[6], "created_at": r[7]}
+
+
+@router.get("")
+def list_products(
+    search: Optional[str] = Query(None),
+    conn=Depends(get_db),
+    _=Depends(get_current_user),
+):
+    with conn.cursor() as cur:
+        if search:
+            cur.execute(
+                "SELECT id,sku,name,description,category,unit,min_stock,created_at "
+                "FROM products WHERE name ILIKE %s OR sku ILIKE %s ORDER BY name",
+                (f"%{search}%", f"%{search}%"),
+            )
+        else:
+            cur.execute("SELECT id,sku,name,description,category,unit,min_stock,created_at FROM products ORDER BY name")
+        return [_row_to_dict(r) for r in cur.fetchall()]
+
+
+@router.post("", status_code=201)
+def create_product(body: ProductCreate, conn=Depends(get_db), _=Depends(require_admin)):
+    with conn.cursor() as cur:
+        try:
+            cur.execute(
+                "INSERT INTO products (sku,name,description,category,unit,min_stock) "
+                "VALUES (%s,%s,%s,%s,%s,%s) RETURNING id,sku,name,description,category,unit,min_stock,created_at",
+                (body.sku, body.name, body.description, body.category, body.unit, body.min_stock),
+            )
+            return _row_to_dict(cur.fetchone())
+        except Exception:
+            raise HTTPException(409, "SKU already exists")
+
+
+@router.put("/{product_id}")
+def update_product(product_id: int, body: ProductUpdate, conn=Depends(get_db), _=Depends(require_admin)):
+    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not fields:
+        raise HTTPException(400, "No fields to update")
+    set_clause = ", ".join(f"{k}=%s" for k in fields)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"UPDATE products SET {set_clause} WHERE id=%s "
+            "RETURNING id,sku,name,description,category,unit,min_stock,created_at",
+            (*fields.values(), product_id),
+        )
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Product not found")
+    return _row_to_dict(row)
+
+
+@router.delete("/{product_id}", status_code=204)
+def delete_product(product_id: int, conn=Depends(get_db), _=Depends(require_admin)):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM products WHERE id=%s RETURNING id", (product_id,))
+        if not cur.fetchone():
+            raise HTTPException(404, "Product not found")
