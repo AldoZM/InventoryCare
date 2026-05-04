@@ -71,3 +71,8 @@ addRoute('#/settings/locations', guard('Ubicaciones', '#/settings/locations', re
 addRoute('*', () => navigate(getSession() ? '#/dashboard' : '#/login'));
 
 initRouter();
+
+window.addEventListener('beforeunload', e => {
+  e.preventDefault();
+  e.returnValue = '';
+});
