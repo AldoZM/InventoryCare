@@ -2,8 +2,9 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 
 from app.database import init_db
 from app.migrations import run_migrations, is_first_run, setup_first_run
@@ -22,6 +23,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="InventoryCare API", version="1.0.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def no_cache(request: Request, call_next):
+    response: Response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
 
 app.include_router(auth_router.router)
 app.include_router(users.router)

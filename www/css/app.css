@@ -52,6 +52,10 @@ body {
 .login-logo-img {
   max-width: 200px;
   height: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 
 /* ── App shell ── */
@@ -85,7 +89,14 @@ body {
   white-space: nowrap;
 }
 
-.sidebar-logo-img { max-height: 36px; width: auto; display: block; }
+.sidebar-logo-img {
+  max-height: 36px;
+  width: auto;
+  display: block;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
 
 .hamburger-btn {
   background: none;
