@@ -1,6 +1,6 @@
 # InventaryCare
 
-Inventory management system for small and medium businesses. Web application with a Python FastAPI backend and a vanilla JavaScript SPA frontend with a dark theme.
+Inventory management system for small and medium businesses. Web application with a Python FastAPI backend and a vanilla JavaScript SPA frontend with a dark theme. Ships as a one-click Windows installer — no technical setup required.
 
 ---
 
@@ -14,6 +14,7 @@ Inventory management system for small and medium businesses. Web application wit
 - **Users** — account management with admin/operator roles (admin only).
 - **Locations** — warehouse location CRUD (admin only).
 - **Authentication** via JWT with 8-hour sessions.
+- **System tray** — runs in the background, accessible from the Windows system tray.
 
 ---
 
@@ -22,21 +23,27 @@ Inventory management system for small and medium businesses. Web application wit
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.13 + FastAPI |
-| Database | PostgreSQL |
+| Database | SQLite (built-in, zero configuration) |
 | Frontend | HTML/CSS/JS vanilla, ES Modules |
 | Auth | JWT (python-jose) + Argon2 (passlib) |
-| DB driver | psycopg2-binary |
+| Launcher | pystray + Pillow (system tray icon) |
+| Packaging | PyInstaller + Inno Setup 6 |
 
 ---
 
-## Requirements
+## Windows Installer (Recommended)
+
+Download `InventaryCare_Setup.exe`, double-click, and follow the installer. The app runs from the system tray — no Python or database setup required.
+
+Default credentials: `admin` / `admin123` — **change after first login**.
+
+---
+
+## Run from Source
+
+### Requirements
 
 - Python 3.11+
-- PostgreSQL 13+
-
----
-
-## Setup
 
 ### 1. Clone the repository
 
@@ -45,57 +52,61 @@ git clone https://github.com/AldoZM/InventoryCare.git
 cd InventoryCare
 ```
 
-### 2. Create virtual environment and install dependencies
+### 2. Install dependencies
 
 ```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-
 pip install -r requirements.txt
 ```
 
-### 3. Configure the database
+### 3. Launch
 
-Create a user and database in PostgreSQL:
-
-```sql
-CREATE USER inventorycare WITH PASSWORD 'your_password';
-ALTER USER inventorycare CREATEDB;
+```bash
+python launcher.py
 ```
 
-### 4. Create a `.env` file
+The app opens automatically in your default browser at **http://localhost:8080**. A system tray icon lets you reopen the browser or quit cleanly.
+
+The SQLite database is stored automatically at:
+- Windows: `%APPDATA%\InventaryCare\inventorycare.db`
+
+### Optional: environment variables
+
+Create a `.env` file to override defaults:
 
 ```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=inventorycare
-DB_USER=inventorycare
-DB_PASSWORD=your_password
 SECRET_KEY=change-this-value-in-production
 TOKEN_EXPIRE_HOURS=8
 PORT=8080
+DB_PATH=C:\custom\path\inventorycare.db
 ```
 
-### 5. Start the server
+---
+
+## Run Tests
 
 ```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
+pip install pytest
+python -m pytest tests/ -v
 ```
 
-Open in your browser: **http://localhost:8080**
+---
 
-Default credentials: `admin` / `admin123` — **change after first login**.
+## Build Windows Installer
+
+Requirements: PyInstaller + [Inno Setup 6](https://jrsoftware.org/isdl.php)
+
+```bash
+pip install pyinstaller
+python -m PyInstaller inventarycare.spec --noconfirm
+```
+
+Then compile `installer.iss` with Inno Setup to produce `InventaryCare_Setup.exe`.
 
 ---
 
 ## Local Network Access
 
-The server listens on `0.0.0.0:8080`, so other PCs on the same network can access it using the host machine's IP:
+The server listens on `0.0.0.0:8080`, so other PCs on the same network can connect using the host machine's IP:
 
 ```
 http://192.168.x.x:8080
@@ -112,7 +123,8 @@ InventaryCare/
 ├── app/
 │   ├── main.py          # FastAPI app, static files mount
 │   ├── auth.py          # JWT, password hashing
-│   ├── database.py      # PostgreSQL connection pool
+│   ├── config.py        # Settings via env vars
+│   ├── database.py      # SQLite connection + threading lock
 │   ├── migrations.py    # Schema and seed data
 │   └── routers/
 │       ├── auth.py
@@ -124,17 +136,27 @@ InventaryCare/
 │       └── users.py
 ├── www/
 │   ├── index.html       # SPA shell
+│   ├── favicon.ico      # Browser tab icon
 │   ├── css/app.css      # Dark theme variables + styles
+│   ├── images/          # Logo and icons
 │   └── js/
 │       ├── app.js       # Boot, auth guard, sidebar
 │       ├── router.js    # Hash router
 │       ├── api.js       # Fetch wrapper with JWT
 │       ├── session.js   # localStorage session
-│       ├── components.js# modal, toast, confirm, renderTable, badge
+│       ├── components.js# Modal, toast, confirm, renderTable, badge
 │       ├── i18n.js      # Spanish UI strings
 │       └── views/       # One module per screen
-├── requirements.txt
-└── .env                 # Not included in git
+├── assets/
+│   └── icon.ico         # App icon (tray + installer)
+├── tests/
+│   ├── conftest.py      # TestClient with temp SQLite DB
+│   ├── test_auth.py     # Auth endpoint tests
+│   └── test_integration.py # Full flow integration tests
+├── launcher.py          # System tray + uvicorn launcher
+├── inventarycare.spec   # PyInstaller build spec
+├── installer.iss        # Inno Setup installer script
+└── requirements.txt
 ```
 
 ---
