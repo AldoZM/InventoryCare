@@ -64,6 +64,6 @@ def setup_first_run():
     from app.auth import hash_password
     with db_conn() as conn:
         conn.execute(
-            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')",
+            "INSERT OR IGNORE INTO users (username, password_hash, role) VALUES (?, ?, 'admin')",
             ("admin", hash_password("admin123")),
         )
