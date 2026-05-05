@@ -3,6 +3,7 @@ uvicorn[standard]==0.32.0
 passlib[argon2]==1.7.4
 python-jose[cryptography]==3.3.0
 python-dotenv==1.0.1
+python-multipart==0.0.12
 pystray==0.19.5
 Pillow==10.4.0
 pytest==8.3.0

@@ -1,4 +1,5 @@
 import shutil
+import sqlite3
 import tempfile
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -15,10 +16,18 @@ router = APIRouter(prefix="/api", tags=["backup"])
 def download_backup(_=Depends(require_admin)):
     if not settings.db_path.exists():
         raise HTTPException(404, "Database file not found")
+    # Use SQLite backup API for a consistent snapshot (WAL-safe)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tmp:
+        tmp_path = Path(tmp.name)
+    dst = sqlite3.connect(str(tmp_path))
+    with _lock:
+        _db._conn.backup(dst)
+    dst.close()
     return FileResponse(
-        path=str(settings.db_path),
+        path=str(tmp_path),
         filename="inventarycare_backup.db",
         media_type="application/octet-stream",
+        background=None,
     )
 
 
@@ -38,7 +47,8 @@ async def restore_backup(file: UploadFile = File(...), _=Depends(require_admin))
         tmp_path.unlink(missing_ok=True)
         raise HTTPException(400, "Invalid SQLite database file")
 
-    # Swap DB under the lock: close → replace → reinit
+    # Swap DB under the lock: close → replace → reinit + run migrations
+    from app.migrations import run_migrations
     with _lock:
         if _db._conn:
             _db._conn.close()
@@ -46,5 +56,6 @@ async def restore_backup(file: UploadFile = File(...), _=Depends(require_admin))
         shutil.copy2(tmp_path, settings.db_path)
         tmp_path.unlink(missing_ok=True)
         init_db()
+        run_migrations()
 
     return {"status": "restored"}

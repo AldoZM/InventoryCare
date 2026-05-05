@@ -22,9 +22,11 @@ def db_conn():
     with _lock:
         try:
             yield _conn
-            _conn.commit()
+            if _conn:
+                _conn.commit()
         except Exception:
-            _conn.rollback()
+            if _conn:
+                _conn.rollback()
             raise
 
 
