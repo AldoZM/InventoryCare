@@ -434,38 +434,34 @@ body {
 .filter-bar select, .filter-bar input { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-1); padding: 7px 10px; font-size: 12px; outline: none; }
 
 /* ── Tutorial ── */
-/* overlay solo para pasos sin target */
-.tutorial-overlay {
+.tut-bg {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,0.55);
-  display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 40px;
+  background: rgba(0,0,0,0.65);
   pointer-events: none;
 }
-.tutorial-overlay.has-target { background: transparent; }
-.tutorial-card {
-  pointer-events: all;
+.tut-spot {
+  position: fixed; z-index: 1001;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  outline: 9999px solid rgba(0,0,0,0.65);
+  box-shadow: 0 0 20px 6px rgba(29,78,216,0.6);
+  pointer-events: none;
+}
+.tut-card {
+  position: fixed; z-index: 1002;
+  bottom: 40px; left: 50%; transform: translateX(-50%);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 28px 32px;
-  max-width: 480px; width: 100%;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  position: relative; z-index: 1002;
+  width: 480px; max-width: calc(100vw - 32px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
-.tut-counter { font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
-.tutorial-card h2 { margin: 10px 0 8px; font-size: 18px; color: var(--text-1); }
-.tutorial-card p  { color: var(--text-2); font-size: 14px; line-height: 1.6; margin: 0 0 24px; }
+.tut-counter { display: block; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.tut-card h2 { margin: 10px 0 8px; font-size: 18px; color: var(--text-1); }
+.tut-card p  { color: var(--text-2); font-size: 14px; line-height: 1.6; margin: 0 0 24px; }
 .tut-actions { display: flex; justify-content: space-between; align-items: center; }
 .tut-nav { display: flex; gap: 8px; }
 .btn-ghost { background: transparent; border: none; color: var(--text-3); font-size: 13px; cursor: pointer; padding: 0; }
 .btn-ghost:hover { color: var(--text-2); }
-.tutorial-highlight {
-  position: fixed; z-index: 1001;
-  border: 2px solid var(--accent);
-  border-radius: 8px;
-  /* giant shadow creates the dark overlay effect with a spotlight cutout */
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 4px rgba(29,78,216,0.3);
-  pointer-events: none;
-  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
-}
