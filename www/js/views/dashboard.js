@@ -68,11 +68,15 @@ export async function renderDashboard(container) {
         <div class="two-col" style="margin-top:20px">
           <div class="card">
             <div class="card-title">Stock por producto (top 10)</div>
-            <canvas id="chart-stock" height="220"></canvas>
+            <div style="position:relative;height:260px">
+              <canvas id="chart-stock"></canvas>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Movimientos — últimos 7 días</div>
-            <canvas id="chart-mov" height="220"></canvas>
+            <div style="position:relative;height:260px">
+              <canvas id="chart-mov"></canvas>
+            </div>
           </div>
         </div>
 
