@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { badge } from '../components.js';
 import { t } from '../i18n.js';
+import { getSession } from '../session.js';
 
 let _refreshTimer = null;
 
@@ -51,6 +52,16 @@ export async function renderDashboard(container) {
             <div class="card-title">${t.dashboard.recentTitle}</div>
             <div id="recent-table"></div>
           </div>
+        </div>
+
+        <div class="card" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div class="card-title" style="margin-bottom:4px">Exportar datos</div>
+            <p style="color:var(--text-3);font-size:12px;margin:0">Descarga toda la información en un archivo Excel con hojas por categoría.</p>
+          </div>
+          <button id="btn-export-excel" class="btn btn-success" style="background:#166534;color:#86efac;white-space:nowrap">
+            ⬇ Exportar a Excel (.xlsx)
+          </button>
         </div>`;
 
       // Alerts
@@ -88,6 +99,31 @@ export async function renderDashboard(container) {
             </table>
           </div>`;
       }
+      // Export button
+      document.getElementById('btn-export-excel')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-export-excel');
+        btn.disabled = true;
+        btn.textContent = 'Generando...';
+        try {
+          const session = getSession();
+          const res = await fetch('/api/export', {
+            headers: { Authorization: `Bearer ${session?.token}` },
+          });
+          if (!res.ok) throw new Error(`Error ${res.status}`);
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `inventarycare_export_${new Date().toISOString().slice(0,10)}.xlsx`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          alert(`No se pudo exportar: ${err.message}`);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '⬇ Exportar a Excel (.xlsx)';
+        }
+      });
     } catch (e) {
       container.innerHTML = `<p class="error-msg">Error cargando dashboard: ${e.message}</p>`;
     }

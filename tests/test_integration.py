@@ -94,3 +94,12 @@ def test_create_user(client, auth_headers):
     })
     assert r.status_code == 201
     assert r.json()["role"] == "operator"
+
+
+def test_export_excel(client, auth_headers):
+    r = client.get("/api/export", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert len(r.content) > 0
