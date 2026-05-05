@@ -4,19 +4,30 @@ import { t } from '../i18n.js';
 import { getSession } from '../session.js';
 
 let _refreshTimer = null;
+let _chartStock = null;
+let _chartMov = null;
 
 export async function renderDashboard(container) {
   if (_refreshTimer) clearInterval(_refreshTimer);
+  if (_chartStock) { _chartStock.destroy(); _chartStock = null; }
+  if (_chartMov)   { _chartMov.destroy();   _chartMov = null; }
 
   container.innerHTML = `<p class="no-data">${t.common.loading}</p>`;
 
   async function load() {
+    if (_chartStock) { _chartStock.destroy(); _chartStock = null; }
+    if (_chartMov)   { _chartMov.destroy();   _chartMov = null; }
+
     try {
-      const [products, locations, lowStock, movements] = await Promise.all([
+      const from7 = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+
+      const [products, locations, lowStock, movements, stockReport, movReport] = await Promise.all([
         api.get('/api/products'),
         api.get('/api/locations'),
         api.get('/api/reports/low-stock'),
         api.get('/api/movements'),
+        api.get('/api/reports/stock'),
+        api.get(`/api/reports/movements?from_date=${from7}`),
       ]);
       if (!products) return;
 
@@ -51,6 +62,17 @@ export async function renderDashboard(container) {
           <div class="card">
             <div class="card-title">${t.dashboard.recentTitle}</div>
             <div id="recent-table"></div>
+          </div>
+        </div>
+
+        <div class="two-col" style="margin-top:20px">
+          <div class="card">
+            <div class="card-title">Stock por producto (top 10)</div>
+            <canvas id="chart-stock" height="220"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-title">Movimientos — últimos 7 días</div>
+            <canvas id="chart-mov" height="220"></canvas>
           </div>
         </div>
 
@@ -99,6 +121,68 @@ export async function renderDashboard(container) {
             </table>
           </div>`;
       }
+
+      // Chart: top 10 products by stock
+      const top10 = [...stockReport]
+        .sort((a, b) => b.total_stock - a.total_stock)
+        .slice(0, 10);
+
+      _chartStock = new Chart(document.getElementById('chart-stock'), {
+        type: 'bar',
+        data: {
+          labels: top10.map(p => p.name.length > 16 ? p.name.slice(0, 14) + '…' : p.name),
+          datasets: [{
+            label: 'Stock',
+            data: top10.map(p => p.total_stock),
+            backgroundColor: '#1d4ed8cc',
+            borderColor: '#3b82f6',
+            borderWidth: 1,
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#2e4060' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#2e4060' }, beginAtZero: true },
+          },
+        },
+      });
+
+      // Chart: movements last 7 days
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(Date.now() - (6 - i) * 864e5);
+        return d.toISOString().slice(0, 10);
+      });
+
+      const byDay = (type) => days.map(day => {
+        const r = movReport.find(m => m.day === day && m.type === type);
+        return r ? r.total_quantity : 0;
+      });
+
+      _chartMov = new Chart(document.getElementById('chart-mov'), {
+        type: 'bar',
+        data: {
+          labels: days.map(d => d.slice(5)),
+          datasets: [
+            { label: 'Entradas',    data: byDay('IN'),       backgroundColor: '#166534cc', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+            { label: 'Salidas',     data: byDay('OUT'),      backgroundColor: '#7f1d1dcc', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
+            { label: 'Traslados',   data: byDay('TRANSFER'), backgroundColor: '#1e3a5fcc', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#2e4060' }, stacked: false },
+            y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#2e4060' }, beginAtZero: true },
+          },
+        },
+      });
+
       // Export button
       document.getElementById('btn-export-excel')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-export-excel');
@@ -124,6 +208,7 @@ export async function renderDashboard(container) {
           btn.innerHTML = '⬇ Exportar a Excel (.xlsx)';
         }
       });
+
     } catch (e) {
       container.innerHTML = `<p class="error-msg">Error cargando dashboard: ${e.message}</p>`;
     }
