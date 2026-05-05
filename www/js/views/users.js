@@ -16,10 +16,10 @@ export async function renderUsers(container) {
         <label>${t.users.username}</label>
         <input id="u-name" value="${u.username || ''}" ${u.id ? 'readonly' : 'required'}>
       </div>
-      <div class="form-group">
-        <label>${t.users.password}${u.id ? ' (dejar vacío para no cambiar)' : ''}</label>
-        <input id="u-pass" type="password" ${u.id ? '' : 'required'}>
-      </div>
+      ${!u.id ? `<div class="form-group">
+        <label>${t.users.password}</label>
+        <input id="u-pass" type="password" required>
+      </div>` : ''}
       <div class="form-group">
         <label>${t.users.role}</label>
         <select id="u-role">
@@ -46,8 +46,9 @@ export async function renderUsers(container) {
       ],
       users,
       [
-        { key: 'edit',   label: t.common.edit,   style: 'secondary', onClick: openEdit },
-        { key: 'delete', label: t.common.delete, style: 'danger',    onClick: doDelete },
+        { key: 'edit',     label: t.common.edit,   style: 'secondary', onClick: openEdit },
+        { key: 'password', label: 'Contraseña',    style: 'secondary', onClick: openPassword },
+        { key: 'delete',   label: t.common.delete, style: 'danger',    onClick: doDelete },
       ]
     );
 
@@ -74,13 +75,33 @@ export async function renderUsers(container) {
   function openEdit(u) {
     modal(`${t.common.edit}: ${u.username}`, userForm(u), async el => {
       const body = { role: el.querySelector('#u-role').value };
-      const pass = el.querySelector('#u-pass').value;
-      if (pass) body.password = pass;
       try {
         await api.put(`/api/users/${u.id}`, body);
         el.remove();
         toast('Usuario actualizado');
         await load();
+      } catch (e) { toast(e.message, 'error'); }
+    });
+  }
+
+  function openPassword(u) {
+    modal(`Cambiar contraseña: ${u.username}`, `
+      <div class="form-group">
+        <label>Nueva contraseña</label>
+        <input id="u-newpass" type="password" required>
+      </div>
+      <div class="form-group">
+        <label>Confirmar contraseña</label>
+        <input id="u-confirmpass" type="password" required>
+      </div>`, async el => {
+      const np = el.querySelector('#u-newpass').value;
+      const cp = el.querySelector('#u-confirmpass').value;
+      if (!np) { toast('La contraseña no puede estar vacía', 'error'); return; }
+      if (np !== cp) { toast('Las contraseñas no coinciden', 'error'); return; }
+      try {
+        await api.put(`/api/users/${u.id}`, { password: np });
+        el.remove();
+        toast('Contraseña actualizada');
       } catch (e) { toast(e.message, 'error'); }
     });
   }
