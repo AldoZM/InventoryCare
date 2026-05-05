@@ -15,6 +15,7 @@ Inventory management system for small and medium businesses. Web application wit
 - **Locations** — warehouse location CRUD (admin only).
 - **Authentication** via JWT with 8-hour sessions.
 - **System tray** — runs in the background, accessible from the Windows system tray.
+- **First-run tutorial** — step-by-step onboarding with spotlight per section. Per-user, skippable, never repeats.
 
 ---
 
