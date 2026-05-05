@@ -44,10 +44,15 @@ export async function renderProducts(container, session) {
     render();
   }
 
-  function render(filter = '') {
-    const visible = filter
-      ? products.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()) || p.sku.toLowerCase().includes(filter.toLowerCase()))
-      : products;
+  function render(filter = '', catFilter = '') {
+    const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+
+    const visible = products.filter(p => {
+      const q = filter.toLowerCase();
+      const matchText = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
+      const matchCat  = !catFilter || p.category === catFilter;
+      return matchText && matchCat;
+    });
 
     const actions = [
       { key: 'print', label: '🖨', style: 'secondary', onClick: printLabel },
@@ -61,6 +66,10 @@ export async function renderProducts(container, session) {
       <div class="toolbar">
         <div class="toolbar-left">
           <input class="search-input" id="search" placeholder="${t.products.search}" value="${filter}">
+          <select id="cat-filter" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-1);padding:7px 10px;font-size:12px;outline:none">
+            <option value="">Todas las categorías</option>
+            ${cats.map(c => `<option value="${c}" ${c === catFilter ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
         </div>
         <div class="toolbar-right">
           ${session.role === 'admin' ? `<button class="btn btn-primary" id="btn-new">+ ${t.products.new}</button>` : ''}
@@ -81,7 +90,8 @@ export async function renderProducts(container, session) {
       actions
     );
 
-    document.getElementById('search').addEventListener('input', e => render(e.target.value));
+    document.getElementById('search').addEventListener('input', e => render(e.target.value, document.getElementById('cat-filter').value));
+    document.getElementById('cat-filter').addEventListener('change', e => render(document.getElementById('search').value, e.target.value));
     document.getElementById('btn-new')?.addEventListener('click', openCreate);
   }
 

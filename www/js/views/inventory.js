@@ -9,19 +9,27 @@ export async function renderInventory(container) {
   ]);
   if (!inventory) return;
 
-  let filterProd = '', filterLoc = '';
+  let filterProd = '', filterLoc = '', filterCat = '';
 
   function render() {
-    const rows = inventory.filter(r =>
-      (!filterProd || r.product.id == filterProd) &&
-      (!filterLoc  || r.location.id == filterLoc)
-    );
+    const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+
+    const rows = inventory.filter(r => {
+      const cat = products.find(p => p.id === r.product.id)?.category || '';
+      return (!filterProd || r.product.id == filterProd) &&
+             (!filterLoc  || r.location.id == filterLoc) &&
+             (!filterCat  || cat === filterCat);
+    });
 
     const prodOpts = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     const locOpts  = locations.map(l => `<option value="${l.id}">${l.code} — ${l.name}</option>`).join('');
+    const catOpts  = cats.map(c => `<option value="${c}">${c}</option>`).join('');
 
     container.innerHTML = `
       <div class="filter-bar">
+        <select id="f-cat">
+          <option value="">Todas las categorías</option>${catOpts}
+        </select>
         <select id="f-prod">
           <option value="">${t.inventory.allProducts}</option>${prodOpts}
         </select>
@@ -53,8 +61,10 @@ export async function renderInventory(container) {
         </div>
       </div>`;
 
+    document.getElementById('f-cat').value  = filterCat;
     document.getElementById('f-prod').value = filterProd;
     document.getElementById('f-loc').value  = filterLoc;
+    document.getElementById('f-cat').addEventListener('change',  e => { filterCat  = e.target.value; filterProd = ''; render(); });
     document.getElementById('f-prod').addEventListener('change', e => { filterProd = e.target.value; render(); });
     document.getElementById('f-loc').addEventListener('change',  e => { filterLoc  = e.target.value; render(); });
   }

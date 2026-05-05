@@ -9,14 +9,16 @@ export async function renderHistory(container) {
   let page    = 0;
 
   // Pre-load products and locations for filter dropdowns
-  const [products, locations] = await Promise.all([
+  const [productsRaw, locations] = await Promise.all([
     api.get('/api/products') || [],
     api.get('/api/locations') || [],
   ]);
+  const products = productsRaw || [];
+  const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
 
   container.innerHTML = `
     <div class="card" style="margin-bottom:16px">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
         <div>
           <label style="display:block;font-size:11px;color:var(--text-3);margin-bottom:4px">Desde</label>
           <input type="date" id="h-from" style="width:100%;background:var(--bg-content);border:1px solid var(--border);border-radius:6px;color:var(--text-1);padding:7px 10px;font-size:12px;outline:none">
@@ -26,10 +28,17 @@ export async function renderHistory(container) {
           <input type="date" id="h-to" style="width:100%;background:var(--bg-content);border:1px solid var(--border);border-radius:6px;color:var(--text-1);padding:7px 10px;font-size:12px;outline:none">
         </div>
         <div>
+          <label style="display:block;font-size:11px;color:var(--text-3);margin-bottom:4px">Categoría</label>
+          <select id="h-cat" style="width:100%;background:var(--bg-content);border:1px solid var(--border);border-radius:6px;color:var(--text-1);padding:7px 10px;font-size:12px;outline:none">
+            <option value="">Todas</option>
+            ${cats.map(c => `<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
           <label style="display:block;font-size:11px;color:var(--text-3);margin-bottom:4px">Producto</label>
           <select id="h-product" style="width:100%;background:var(--bg-content);border:1px solid var(--border);border-radius:6px;color:var(--text-1);padding:7px 10px;font-size:12px;outline:none">
             <option value="">Todos</option>
-            ${(products || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+            ${products.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
           </select>
         </div>
         <div>
