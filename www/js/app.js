@@ -9,6 +9,7 @@ import { renderMovements } from './views/movements.js';
 import { renderHistory }   from './views/history.js';
 import { renderUsers }     from './views/users.js';
 import { renderLocations } from './views/locations.js';
+import { renderSettings }  from './views/settings.js';
 
 function showLogin() {
   document.getElementById('login-page').classList.remove('hidden');
@@ -70,8 +71,9 @@ addRoute('#/products',           guard('Productos',   '#/products',           re
 addRoute('#/inventory',          guard('Inventario',  '#/inventory',          renderInventory));
 addRoute('#/movements',          guard('Movimientos', '#/movements',          renderMovements));
 addRoute('#/history',            guard('Historial',   '#/history',            renderHistory));
-addRoute('#/settings/users',     guard('Usuarios',    '#/settings/users',     renderUsers,     true));
-addRoute('#/settings/locations', guard('Ubicaciones', '#/settings/locations', renderLocations, true));
+addRoute('#/settings/users',     guard('Usuarios',       '#/settings/users',     renderUsers,     true));
+addRoute('#/settings/locations', guard('Ubicaciones',    '#/settings/locations', renderLocations, true));
+addRoute('#/settings/system',    guard('Configuración',  '#/settings/system',    renderSettings,  true));
 addRoute('*', () => navigate(getSession() ? '#/dashboard' : '#/login'));
 
 initRouter();
