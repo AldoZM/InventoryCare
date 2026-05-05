@@ -61,6 +61,7 @@ function _render() {
 
   // Remove previous highlight
   if (_highlight) _highlight.remove();
+  _highlight = null;
 
   // Spotlight target element
   if (step.target) {
@@ -69,14 +70,12 @@ function _render() {
       const rect = el.getBoundingClientRect();
       _highlight = document.createElement('div');
       _highlight.className = 'tutorial-highlight';
-      _highlight.style.cssText = `
-        top:${rect.top - 4}px;
-        left:${rect.left - 4}px;
-        width:${rect.width + 8}px;
-        height:${rect.height + 8}px;
-      `;
+      _highlight.style.cssText = `top:${rect.top - 4}px;left:${rect.left - 4}px;width:${rect.width + 8}px;height:${rect.height + 8}px;`;
       document.body.appendChild(_highlight);
+      _overlay.classList.add('has-target');
     }
+  } else {
+    _overlay.classList.remove('has-target');
   }
 
   // Update card content
