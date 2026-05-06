@@ -16,6 +16,9 @@ __pycache__/
 # Superpowers / brainstorm artifacts
 .superpowers/
 
+# Build output
+dist/
+
 # C++ legacy (not used)
 build/
 CMakeFiles/
