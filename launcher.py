@@ -86,69 +86,74 @@ def _offer_shortcut():
     if _SHORTCUT_FLAG.exists():
         return
 
-    ps_dialog = r"""
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
+    import ctypes
+    import ctypes.wintypes as wintypes
 
-$form = New-Object System.Windows.Forms.Form
-$form.Text = "InventaryCare"
-$form.Size = New-Object System.Drawing.Size(400, 190)
-$form.StartPosition = "CenterScreen"
-$form.FormBorderStyle = "FixedDialog"
-$form.MaximizeBox = $false
-$form.MinimizeBox = $false
-$form.TopMost = $true
+    class TASKDIALOGCONFIG(ctypes.Structure):
+        _fields_ = [
+            ("cbSize",                  wintypes.UINT),
+            ("hwndParent",              wintypes.HWND),
+            ("hInstance",               wintypes.HINSTANCE),
+            ("dwFlags",                 wintypes.DWORD),
+            ("dwCommonButtons",         wintypes.DWORD),
+            ("pszWindowTitle",          wintypes.LPCWSTR),
+            ("hMainIcon",               ctypes.c_void_p),
+            ("pszMainInstruction",      wintypes.LPCWSTR),
+            ("pszContent",              wintypes.LPCWSTR),
+            ("cButtons",                wintypes.UINT),
+            ("pButtons",                ctypes.c_void_p),
+            ("nDefaultButton",          ctypes.c_int),
+            ("cRadioButtons",           wintypes.UINT),
+            ("pRadioButtons",           ctypes.c_void_p),
+            ("nDefaultRadioButton",     ctypes.c_int),
+            ("pszVerificationText",     wintypes.LPCWSTR),
+            ("pszExpandedInformation",  wintypes.LPCWSTR),
+            ("pszExpandedControlText",  wintypes.LPCWSTR),
+            ("pszCollapsedControlText", wintypes.LPCWSTR),
+            ("hFooterIcon",             ctypes.c_void_p),
+            ("pszFooter",               wintypes.LPCWSTR),
+            ("pfCallback",              ctypes.c_void_p),
+            ("lpCallbackData",          ctypes.c_size_t),
+            ("cxWidth",                 wintypes.UINT),
+        ]
 
-$label = New-Object System.Windows.Forms.Label
-$label.Text = "Deseas crear un acceso directo de InventaryCare en el escritorio?"
-$label.Location = New-Object System.Drawing.Point(20, 18)
-$label.Size = New-Object System.Drawing.Size(355, 44)
-$label.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-$form.Controls.Add($label)
+    TDCBF_YES_BUTTON          = 0x0002
+    TDCBF_NO_BUTTON           = 0x0004
+    TDF_ALLOW_DIALOG_CANCELLATION = 0x0008
+    TD_INFORMATION_ICON       = 0xFFFD  # MAKEINTRESOURCEW(-3)
+    IDYES = 6
 
-$chk = New-Object System.Windows.Forms.CheckBox
-$chk.Text = "No volver a mostrar"
-$chk.Location = New-Object System.Drawing.Point(20, 72)
-$chk.Size = New-Object System.Drawing.Size(200, 24)
-$chk.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$form.Controls.Add($chk)
+    cfg = TASKDIALOGCONFIG()
+    cfg.cbSize              = ctypes.sizeof(TASKDIALOGCONFIG)
+    cfg.dwFlags             = TDF_ALLOW_DIALOG_CANCELLATION
+    cfg.dwCommonButtons     = TDCBF_YES_BUTTON | TDCBF_NO_BUTTON
+    cfg.pszWindowTitle      = "InventaryCare"
+    cfg.hMainIcon           = TD_INFORMATION_ICON
+    cfg.pszMainInstruction  = "Acceso directo en el escritorio"
+    cfg.pszContent          = "¿Deseas crear un acceso directo de InventaryCare en el escritorio para abrirlo más fácilmente?"
+    cfg.pszVerificationText = "No volver a mostrar"
 
-$btnSi = New-Object System.Windows.Forms.Button
-$btnSi.Text = "Si"
-$btnSi.Location = New-Object System.Drawing.Point(200, 118)
-$btnSi.Size = New-Object System.Drawing.Size(80, 30)
-$btnSi.DialogResult = [System.Windows.Forms.DialogResult]::Yes
-$form.Controls.Add($btnSi)
+    pnButton  = ctypes.c_int(0)
+    pVerified = ctypes.c_bool(False)
 
-$btnNo = New-Object System.Windows.Forms.Button
-$btnNo.Text = "No"
-$btnNo.Location = New-Object System.Drawing.Point(292, 118)
-$btnNo.Size = New-Object System.Drawing.Size(80, 30)
-$btnNo.DialogResult = [System.Windows.Forms.DialogResult]::No
-$form.Controls.Add($btnNo)
-
-$form.AcceptButton = $btnSi
-$form.CancelButton = $btnNo
-$r = $form.ShowDialog()
-Write-Output "$r|$($chk.Checked)"
-"""
     try:
-        proc = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", ps_dialog],
-            capture_output=True, text=True, timeout=120,
+        hr = ctypes.windll.comctl32.TaskDialogIndirect(
+            ctypes.byref(cfg),
+            ctypes.byref(pnButton),
+            None,
+            ctypes.byref(pVerified),
         )
-        parts = proc.stdout.strip().split("|")
-        answer = parts[0] if parts else "No"
-        dont_show = len(parts) > 1 and parts[1].lower() == "true"
-
-        if answer == "Yes":
-            _SHORTCUT_FLAG.touch()
-            _create_shortcut()
-        elif dont_show:
-            _SHORTCUT_FLAG.touch()
-        # else: ask again next launch
+        if hr != 0:
+            raise OSError(f"TaskDialogIndirect hr={hr:#010x}")
     except Exception:
         _log("[launcher] shortcut dialog failed:\n" + traceback.format_exc())
+        return
+
+    if pnButton.value == IDYES:
+        _SHORTCUT_FLAG.touch()
+        _create_shortcut()
+    elif pVerified.value:
+        _SHORTCUT_FLAG.touch()
 
 
 def main():
