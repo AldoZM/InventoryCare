@@ -86,74 +86,59 @@ def _offer_shortcut():
     if _SHORTCUT_FLAG.exists():
         return
 
-    import ctypes
-    import ctypes.wintypes as wintypes
-
-    class TASKDIALOGCONFIG(ctypes.Structure):
-        _fields_ = [
-            ("cbSize",                  wintypes.UINT),
-            ("hwndParent",              wintypes.HWND),
-            ("hInstance",               wintypes.HINSTANCE),
-            ("dwFlags",                 wintypes.DWORD),
-            ("dwCommonButtons",         wintypes.DWORD),
-            ("pszWindowTitle",          wintypes.LPCWSTR),
-            ("hMainIcon",               ctypes.c_void_p),
-            ("pszMainInstruction",      wintypes.LPCWSTR),
-            ("pszContent",              wintypes.LPCWSTR),
-            ("cButtons",                wintypes.UINT),
-            ("pButtons",                ctypes.c_void_p),
-            ("nDefaultButton",          ctypes.c_int),
-            ("cRadioButtons",           wintypes.UINT),
-            ("pRadioButtons",           ctypes.c_void_p),
-            ("nDefaultRadioButton",     ctypes.c_int),
-            ("pszVerificationText",     wintypes.LPCWSTR),
-            ("pszExpandedInformation",  wintypes.LPCWSTR),
-            ("pszExpandedControlText",  wintypes.LPCWSTR),
-            ("pszCollapsedControlText", wintypes.LPCWSTR),
-            ("hFooterIcon",             ctypes.c_void_p),
-            ("pszFooter",               wintypes.LPCWSTR),
-            ("pfCallback",              ctypes.c_void_p),
-            ("lpCallbackData",          ctypes.c_size_t),
-            ("cxWidth",                 wintypes.UINT),
-        ]
-
-    TDCBF_YES_BUTTON          = 0x0002
-    TDCBF_NO_BUTTON           = 0x0004
-    TDF_ALLOW_DIALOG_CANCELLATION = 0x0008
-    TD_INFORMATION_ICON       = 0xFFFD  # MAKEINTRESOURCEW(-3)
-    IDYES = 6
-
-    cfg = TASKDIALOGCONFIG()
-    cfg.cbSize              = ctypes.sizeof(TASKDIALOGCONFIG)
-    cfg.dwFlags             = TDF_ALLOW_DIALOG_CANCELLATION
-    cfg.dwCommonButtons     = TDCBF_YES_BUTTON | TDCBF_NO_BUTTON
-    cfg.pszWindowTitle      = "InventaryCare"
-    cfg.hMainIcon           = TD_INFORMATION_ICON
-    cfg.pszMainInstruction  = "Acceso directo en el escritorio"
-    cfg.pszContent          = "¿Deseas crear un acceso directo de InventaryCare en el escritorio para abrirlo más fácilmente?"
-    cfg.pszVerificationText = "No volver a mostrar"
-
-    pnButton  = ctypes.c_int(0)
-    pVerified = ctypes.c_bool(False)
+    ps_dialog = (
+        'Add-Type -AssemblyName System.Windows.Forms,System.Drawing;'
+        '$f=New-Object System.Windows.Forms.Form;'
+        '$f.Text="InventaryCare";'
+        '$f.Size=New-Object System.Drawing.Size(400,190);'
+        '$f.StartPosition="CenterScreen";'
+        '$f.FormBorderStyle="FixedDialog";'
+        '$f.MaximizeBox=$false;$f.MinimizeBox=$false;$f.TopMost=$true;'
+        '$l=New-Object System.Windows.Forms.Label;'
+        '$l.Text="Deseas crear un acceso directo de InventaryCare en el escritorio?";'
+        '$l.Location=New-Object System.Drawing.Point(20,18);'
+        '$l.Size=New-Object System.Drawing.Size(355,44);'
+        '$l.Font=New-Object System.Drawing.Font("Segoe UI",10);'
+        '$f.Controls.Add($l);'
+        '$c=New-Object System.Windows.Forms.CheckBox;'
+        '$c.Text="No volver a mostrar";'
+        '$c.Location=New-Object System.Drawing.Point(20,72);'
+        '$c.Size=New-Object System.Drawing.Size(200,24);'
+        '$c.Font=New-Object System.Drawing.Font("Segoe UI",9);'
+        '$f.Controls.Add($c);'
+        '$bS=New-Object System.Windows.Forms.Button;'
+        '$bS.Text="Si";'
+        '$bS.Location=New-Object System.Drawing.Point(200,118);'
+        '$bS.Size=New-Object System.Drawing.Size(80,30);'
+        '$bS.DialogResult=[System.Windows.Forms.DialogResult]::Yes;'
+        '$f.Controls.Add($bS);'
+        '$bN=New-Object System.Windows.Forms.Button;'
+        '$bN.Text="No";'
+        '$bN.Location=New-Object System.Drawing.Point(292,118);'
+        '$bN.Size=New-Object System.Drawing.Size(80,30);'
+        '$bN.DialogResult=[System.Windows.Forms.DialogResult]::No;'
+        '$f.Controls.Add($bN);'
+        '$f.AcceptButton=$bS;$f.CancelButton=$bN;'
+        '$r=$f.ShowDialog();'
+        'Write-Output "$r|$($c.Checked)"'
+    )
 
     try:
-        hr = ctypes.windll.comctl32.TaskDialogIndirect(
-            ctypes.byref(cfg),
-            ctypes.byref(pnButton),
-            None,
-            ctypes.byref(pVerified),
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_dialog],
+            capture_output=True, text=True, timeout=120,
         )
-        if hr != 0:
-            raise OSError(f"TaskDialogIndirect hr={hr:#010x}")
+        parts = proc.stdout.strip().split("|")
+        answer   = parts[0] if parts else "No"
+        no_show  = len(parts) > 1 and parts[1].lower() == "true"
+
+        if answer == "Yes":
+            _SHORTCUT_FLAG.touch()
+            _create_shortcut()
+        elif no_show:
+            _SHORTCUT_FLAG.touch()
     except Exception:
         _log("[launcher] shortcut dialog failed:\n" + traceback.format_exc())
-        return
-
-    if pnButton.value == IDYES:
-        _SHORTCUT_FLAG.touch()
-        _create_shortcut()
-    elif pVerified.value:
-        _SHORTCUT_FLAG.touch()
 
 
 def main():
