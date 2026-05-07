@@ -16,9 +16,22 @@ function showLogin() {
   document.getElementById('app-shell').classList.add('hidden');
 }
 
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-backdrop').classList.remove('visible');
+}
+
 function showApp(session) {
   document.getElementById('login-page').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
+
+  document.getElementById('hamburger').addEventListener('click', () => {
+    const open = document.getElementById('sidebar').classList.toggle('mobile-open');
+    document.getElementById('sidebar-backdrop').classList.toggle('visible', open);
+  });
+  document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
+  document.querySelectorAll('#sidebar-nav a').forEach(a =>
+    a.addEventListener('click', closeSidebar));
 
   document.getElementById('sidebar-user-label').textContent = session.username;
   document.getElementById('sidebar-username-initial').textContent = session.username[0].toUpperCase();
