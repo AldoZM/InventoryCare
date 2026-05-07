@@ -19,10 +19,9 @@ def create_shortcut():
     _FLAG.touch()
     exe = sys.executable
     icon = str(Path(sys._MEIPASS) / "assets" / "icon.ico") if getattr(sys, "frozen", False) else ""
-    desktop = Path(os.environ.get("USERPROFILE", Path.home())) / "Desktop"
-    shortcut = str(desktop / "InventaryCare.lnk")
     ps = (
-        f'$s=(New-Object -COM WScript.Shell).CreateShortcut("{shortcut}");'
+        f'$sh=(New-Object -COM WScript.Shell);'
+        f'$s=$sh.CreateShortcut($sh.SpecialFolders("Desktop")+"\\InventaryCare.lnk");'
         f'$s.TargetPath="{exe}";'
         f'$s.WorkingDirectory="{Path(exe).parent}";'
         f'$s.IconLocation="{icon}";'
