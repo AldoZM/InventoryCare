@@ -1,16 +1,19 @@
 # inventarycare.spec
 block_cipher = None
 
+from PyInstaller.utils.hooks import collect_all, collect_submodules
+pil_datas, pil_binaries, pil_hiddenimports = collect_all('PIL')
+
 a = Analysis(
     ['launcher.py'],
     pathex=[],
-    binaries=[],
+    binaries=[] + pil_binaries,
     datas=[
         ('www', 'www'),
         ('assets', 'assets'),
         ('app', 'app'),
-    ],
-    hiddenimports=[
+    ] + pil_datas,
+    hiddenimports=pil_hiddenimports + [
         'uvicorn.logging',
         'uvicorn.loops',
         'uvicorn.loops.auto',

@@ -7,7 +7,6 @@ import traceback
 from pathlib import Path
 
 import uvicorn
-from PIL import Image
 import pystray
 
 PORT = 8080
@@ -16,7 +15,9 @@ URL = f"http://localhost:{PORT}"
 # When frozen by PyInstaller, resolve bundle root via _MEIPASS
 _BUNDLE = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
 
-LOG = Path("inventarycare.log")
+_log_dir = Path(os.environ.get("APPDATA", Path.home())) / "InventaryCare"
+_log_dir.mkdir(parents=True, exist_ok=True)
+LOG = _log_dir / "launcher.log"
 LOG.write_text("")  # reset on each launch
 
 
@@ -25,17 +26,19 @@ def _log(msg: str):
         f.write(msg + "\n")
 
 
-def _load_icon() -> Image.Image:
-    icon_path = _BUNDLE / "assets" / "icon.ico"
-    if icon_path.exists():
-        return Image.open(icon_path)
-    # Fallback: generate a minimal blue square
-    from PIL import ImageDraw
-    img = Image.new("RGBA", (64, 64), (29, 78, 216, 255))
-    d = ImageDraw.Draw(img)
-    d.rectangle([20, 28, 44, 36], fill=(255, 255, 255))
-    d.rectangle([28, 20, 36, 44], fill=(255, 255, 255))
-    return img
+def _load_icon():
+    try:
+        from PIL import Image, ImageDraw
+        icon_path = _BUNDLE / "assets" / "icon.ico"
+        if icon_path.exists():
+            return Image.open(icon_path)
+        img = Image.new("RGBA", (64, 64), (29, 78, 216, 255))
+        d = ImageDraw.Draw(img)
+        d.rectangle([20, 28, 44, 36], fill=(255, 255, 255))
+        d.rectangle([28, 20, 36, 44], fill=(255, 255, 255))
+        return img
+    except Exception:
+        return None
 
 
 def _run_server():
@@ -82,7 +85,15 @@ def main():
         pystray.MenuItem("Abrir InventaryCare", _open_browser, default=True),
         pystray.MenuItem("Salir", _quit),
     )
-    icon = pystray.Icon("InventaryCare", _load_icon(), "InventaryCare", menu)
+    img = _load_icon()
+    if img is None:
+        try:
+            from PIL import Image
+            img = Image.new("RGB", (64, 64), (29, 78, 216))
+        except Exception:
+            _log("[launcher] PIL unavailable — no tray icon")
+            return
+    icon = pystray.Icon("InventaryCare", img, "InventaryCare", menu)
     icon.run()
     sys.exit(0)
 
