@@ -52,11 +52,53 @@ function guard(title, hash, fn, adminOnly = false) {
   };
 }
 
+async function checkShortcutOffer() {
+  try {
+    const res = await fetch('/api/shortcut/status');
+    const { offered } = await res.json();
+    if (offered) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box modal-sm" style="max-width:400px">
+        <div class="modal-header">
+          <h2 style="font-size:15px">Acceso directo en el escritorio</h2>
+        </div>
+        <div class="modal-body" style="padding:16px 20px 8px">
+          <p style="color:var(--text-1);margin-bottom:14px">
+            ¿Deseas crear un acceso directo de InventaryCare en el escritorio para abrirlo más fácilmente?
+          </p>
+          <label style="display:flex;align-items:center;gap:8px;color:var(--text-2);cursor:pointer">
+            <input type="checkbox" id="sc-no-show" style="width:15px;height:15px">
+            No volver a mostrar
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="sc-no">No, gracias</button>
+          <button class="btn btn-primary"   id="sc-yes">Sí, crear acceso directo</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#sc-yes').onclick = async () => {
+      overlay.remove();
+      await fetch('/api/shortcut/create', { method: 'POST' });
+    };
+    overlay.querySelector('#sc-no').onclick = async () => {
+      overlay.remove();
+      if (document.getElementById('sc-no-show')?.checked)
+        await fetch('/api/shortcut/dismiss', { method: 'POST' });
+    };
+  } catch (_) {}
+}
+
 // Boot
 const session = getSession();
 if (session) {
   showApp(session);
   setTimeout(() => startTutorial(session.username), 400);
+  setTimeout(checkShortcutOffer, 800);
 }
 
 // Routes

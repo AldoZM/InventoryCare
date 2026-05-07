@@ -4,7 +4,6 @@ import threading
 import webbrowser
 import time
 import traceback
-import subprocess
 from pathlib import Path
 
 import uvicorn
@@ -20,8 +19,6 @@ _log_dir = Path(os.environ.get("APPDATA", Path.home())) / "InventaryCare"
 _log_dir.mkdir(parents=True, exist_ok=True)
 LOG = _log_dir / "launcher.log"
 LOG.write_text("")  # reset on each launch
-
-_SHORTCUT_FLAG = _log_dir / ".shortcut_offered"
 
 
 def _log(msg: str):
@@ -65,82 +62,6 @@ def _quit(icon, item):
     icon.stop()
 
 
-def _create_shortcut():
-    exe = str(_BUNDLE / "InventaryCare.exe") if getattr(sys, "frozen", False) else sys.executable
-    icon_path = str(_BUNDLE / "assets" / "icon.ico")
-    desktop = Path(os.environ.get("USERPROFILE", Path.home())) / "Desktop"
-    shortcut = str(desktop / "InventaryCare.lnk")
-    ps = (
-        f'$s=(New-Object -COM WScript.Shell).CreateShortcut("{shortcut}");'
-        f'$s.TargetPath="{exe}";'
-        f'$s.WorkingDirectory="{_BUNDLE}";'
-        f'$s.IconLocation="{icon_path}";'
-        f'$s.Save()'
-    )
-    subprocess.run(["powershell", "-NoProfile", "-Command", ps],
-                   capture_output=True, timeout=10)
-    _log("[launcher] desktop shortcut created")
-
-
-def _offer_shortcut():
-    if _SHORTCUT_FLAG.exists():
-        return
-
-    ps_dialog = (
-        'Add-Type -AssemblyName System.Windows.Forms,System.Drawing;'
-        '$f=New-Object System.Windows.Forms.Form;'
-        '$f.Text="InventaryCare";'
-        '$f.Size=New-Object System.Drawing.Size(400,190);'
-        '$f.StartPosition="CenterScreen";'
-        '$f.FormBorderStyle="FixedDialog";'
-        '$f.MaximizeBox=$false;$f.MinimizeBox=$false;$f.TopMost=$true;'
-        '$l=New-Object System.Windows.Forms.Label;'
-        '$l.Text="Deseas crear un acceso directo de InventaryCare en el escritorio?";'
-        '$l.Location=New-Object System.Drawing.Point(20,18);'
-        '$l.Size=New-Object System.Drawing.Size(355,44);'
-        '$l.Font=New-Object System.Drawing.Font("Segoe UI",10);'
-        '$f.Controls.Add($l);'
-        '$c=New-Object System.Windows.Forms.CheckBox;'
-        '$c.Text="No volver a mostrar";'
-        '$c.Location=New-Object System.Drawing.Point(20,72);'
-        '$c.Size=New-Object System.Drawing.Size(200,24);'
-        '$c.Font=New-Object System.Drawing.Font("Segoe UI",9);'
-        '$f.Controls.Add($c);'
-        '$bS=New-Object System.Windows.Forms.Button;'
-        '$bS.Text="Si";'
-        '$bS.Location=New-Object System.Drawing.Point(200,118);'
-        '$bS.Size=New-Object System.Drawing.Size(80,30);'
-        '$bS.DialogResult=[System.Windows.Forms.DialogResult]::Yes;'
-        '$f.Controls.Add($bS);'
-        '$bN=New-Object System.Windows.Forms.Button;'
-        '$bN.Text="No";'
-        '$bN.Location=New-Object System.Drawing.Point(292,118);'
-        '$bN.Size=New-Object System.Drawing.Size(80,30);'
-        '$bN.DialogResult=[System.Windows.Forms.DialogResult]::No;'
-        '$f.Controls.Add($bN);'
-        '$f.AcceptButton=$bS;$f.CancelButton=$bN;'
-        '$r=$f.ShowDialog();'
-        'Write-Output "$r|$($c.Checked)"'
-    )
-
-    try:
-        proc = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_dialog],
-            capture_output=True, text=True, timeout=120,
-        )
-        parts = proc.stdout.strip().split("|")
-        answer   = parts[0] if parts else "No"
-        no_show  = len(parts) > 1 and parts[1].lower() == "true"
-
-        if answer == "Yes":
-            _SHORTCUT_FLAG.touch()
-            _create_shortcut()
-        elif no_show:
-            _SHORTCUT_FLAG.touch()
-    except Exception:
-        _log("[launcher] shortcut dialog failed:\n" + traceback.format_exc())
-
-
 def main():
     server_thread = threading.Thread(target=_run_server, daemon=True)
     server_thread.start()
@@ -159,7 +80,6 @@ def main():
         _log("[launcher] server never became ready — check inventarycare.log")
 
     webbrowser.open(URL)
-    _offer_shortcut()
 
     menu = pystray.Menu(
         pystray.MenuItem("Abrir InventaryCare", _open_browser, default=True),
