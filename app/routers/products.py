@@ -14,6 +14,7 @@ class ProductCreate(BaseModel):
     category: Optional[str] = None
     unit: str = "pcs"
     min_stock: int = 0
+    price: Optional[float] = None
 
 
 class ProductUpdate(BaseModel):
@@ -22,11 +23,16 @@ class ProductUpdate(BaseModel):
     category: Optional[str] = None
     unit: Optional[str] = None
     min_stock: Optional[int] = None
+    price: Optional[float] = None
 
 
 def _row_to_dict(r):
-    return {"id": r[0], "sku": r[1], "name": r[2], "description": r[3],
-            "category": r[4], "unit": r[5], "min_stock": r[6], "created_at": r[7]}
+    return {
+        "id": r["id"], "sku": r["sku"], "name": r["name"],
+        "description": r["description"], "category": r["category"],
+        "unit": r["unit"], "min_stock": r["min_stock"],
+        "price": r["price"], "created_at": r["created_at"],
+    }
 
 
 @router.get("")
@@ -38,12 +44,15 @@ def list_products(
     cur = conn.cursor()
     if search:
         cur.execute(
-            "SELECT id,sku,name,description,category,unit,min_stock,created_at "
+            "SELECT id,sku,name,description,category,unit,min_stock,price,created_at "
             "FROM products WHERE name LIKE ? OR sku LIKE ? ORDER BY name",
             (f"%{search}%", f"%{search}%"),
         )
     else:
-        cur.execute("SELECT id,sku,name,description,category,unit,min_stock,created_at FROM products ORDER BY name")
+        cur.execute(
+            "SELECT id,sku,name,description,category,unit,min_stock,price,created_at "
+            "FROM products ORDER BY name"
+        )
     return [_row_to_dict(r) for r in cur.fetchall()]
 
 
@@ -52,9 +61,11 @@ def create_product(body: ProductCreate, conn=Depends(get_db), _=Depends(require_
     cur = conn.cursor()
     try:
         cur.execute(
-            "INSERT INTO products (sku,name,description,category,unit,min_stock) "
-            "VALUES (?,?,?,?,?,?) RETURNING id,sku,name,description,category,unit,min_stock,created_at",
-            (body.sku, body.name, body.description, body.category, body.unit, body.min_stock),
+            "INSERT INTO products (sku,name,description,category,unit,min_stock,price) "
+            "VALUES (?,?,?,?,?,?,?) "
+            "RETURNING id,sku,name,description,category,unit,min_stock,price,created_at",
+            (body.sku, body.name, body.description, body.category,
+             body.unit, body.min_stock, body.price),
         )
         return _row_to_dict(cur.fetchone())
     except Exception:
@@ -70,7 +81,7 @@ def update_product(product_id: int, body: ProductUpdate, conn=Depends(get_db), _
     cur = conn.cursor()
     cur.execute(
         f"UPDATE products SET {set_clause} WHERE id=? "
-        "RETURNING id,sku,name,description,category,unit,min_stock,created_at",
+        "RETURNING id,sku,name,description,category,unit,min_stock,price,created_at",
         (*fields.values(), product_id),
     )
     row = cur.fetchone()

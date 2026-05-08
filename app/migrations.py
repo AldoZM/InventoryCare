@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS products (
     category    TEXT,
     unit        TEXT NOT NULL DEFAULT 'pcs',
     min_stock   INTEGER NOT NULL DEFAULT 0,
+    price       REAL,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -52,6 +53,10 @@ CREATE TABLE IF NOT EXISTS movements (
 def run_migrations():
     with db_conn() as conn:
         conn.executescript(SCHEMA)
+        try:
+            conn.execute("ALTER TABLE products ADD COLUMN price REAL")
+        except Exception:
+            pass  # column already exists in existing databases
 
 
 def is_first_run() -> bool:
