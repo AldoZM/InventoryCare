@@ -1,3 +1,5 @@
+import sqlite3
+
 from app.database import db_conn
 
 SCHEMA = """
@@ -55,7 +57,7 @@ def run_migrations():
         conn.executescript(SCHEMA)
         try:
             conn.execute("ALTER TABLE products ADD COLUMN price REAL")
-        except Exception:
+        except sqlite3.OperationalError:
             pass  # column already exists in existing databases
 
 
