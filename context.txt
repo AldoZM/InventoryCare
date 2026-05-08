@@ -9,8 +9,9 @@ Runs local. No server needed. Windows .exe target.
 Repo: https://github.com/AldoZM/InventoryCare
 
 == REPO STATE ==
-Branch: main (clean, up to date with origin/main).
-No open PRs. No pending branches.
+Branch: feature/product-scan (pushed to GitHub, PR pendiente de merge).
+PR URL: https://github.com/AldoZM/InventoryCare/pull/new/feature/product-scan
+main: sin cambios desde a836f40.
 
 == TECH STACK DETAIL ==
 - Backend: FastAPI + SQLite (migrated FROM PostgreSQL)
@@ -35,39 +36,40 @@ No open PRs. No pending branches.
 11. Mobile responsive layout — full UI works on small screens
 12. Desktop shortcut — offered as browser modal on first launch
 
+== WHAT WAS BUILT (feature/product-scan — pendiente merge) ==
+13. Escaneo de cámara para productos:
+    - Campo `price REAL` en products (migration safe para DBs existentes)
+    - app/routers/scan.py: GET /api/scan/sku/{barcode}, GET /api/scan/lookup/{barcode}, POST /api/scan/ocr
+    - www/js/scan.js: modal cámara, flujo barcode + OCR, XSS-safe (DOM APIs en preview)
+    - www/js/views/products.js: botón 📷 Escanear, campo Precio, escapeHtml en form
+    - www/js/html5-qrcode.min.js: bundled local (375KB, offline)
+    - pytesseract en requirements.txt (opcional, server-side OCR)
+    - 23 tests pasando
+
 == FILES THAT MATTER ==
 app/database.py       — SQLite connection + Lock + init_db
-app/migrations.py     — schema migrations
-app/routers/          — auth, products, inventory, movements, reports, locations, users
+app/migrations.py     — schema migrations (incluye price column)
+app/routers/          — auth, products, inventory, movements, reports, locations, users, scan
+app/routers/scan.py   — scan endpoints (NEW)
 launcher.py           — system tray + uvicorn + first-run logic
 inventarycare.spec    — PyInstaller config
 installer.iss         — Inno Setup config
 www/                  — all frontend HTML/JS/CSS
-www/js/views/products.js — product form (where scan UI goes)
-tests/                — pytest tests (10 passing)
+www/js/scan.js        — scan modal module (NEW)
+www/js/html5-qrcode.min.js — bundled library (NEW)
+www/js/views/products.js — product form + scan button
+tests/                — pytest tests (23 passing)
 
 == NEXT PENDING TASK ==
-Feature: image scan for product data entry (IN BRAINSTORM — INCOMPLETE)
-Brainstorm stopped mid-session. Resume from question 3.
+1. Mergear PR feature/product-scan a main
+2. Verificar que tests sigan pasando en main
+3. Decidir siguiente feature
 
-DECISIONS SO FAR:
-- Feature lives inside existing product form (same page, not separate)
-- Users access via phone browser on local IP (no app install needed)
-- Scan type: barcode + QR on product label
-- Barcode behavior (layered fallback):
-    1. Check if SKU already exists in local inventory → open that product
-    2. If not found → try external API lookup (Open Food Facts / UPCitemdb) as BONUS
-    3. If lookup fails or no internet → pre-fill only SKU field
-    4. User always confirms/edits before saving
-- OCR text reading: PENDING — stopped at question 3
-    Q: does app need to read label TEXT (name/category) via OCR,
-       or is barcode+lookup enough?
-    User had not answered yet.
-
-PENDING BRAINSTORM QUESTIONS:
-- Q3: OCR text needed? (A=no, B=yes for fallback)
-- After Q3: propose 2-3 implementation approaches
-- Then: design doc → implementation plan
+== NOTA CÁMARA EN TELÉFONO ==
+getUserMedia requiere HTTPS en IP no-localhost.
+Para pruebas en red local sin HTTPS:
+chrome://flags/#unsafely-treat-insecure-origin-as-secure
+Agregar http://192.168.x.x:PORT a la lista.
 
 == HOW TO RUN (dev) ==
 cd InventaryCare
@@ -84,6 +86,9 @@ python launcher.py
 - One-folder PyInstaller (not onefile): faster startup, easier debug
 - Vanilla JS: no React/Vue, keep simple for small app
 - pystray: needed for Windows tray icon without extra deps
+- html5-qrcode bundled local (not CDN): offline use in installer
+- pytesseract optional: app works without it, OCR server returns 503 gracefully
+- Tesseract.js loaded from CDN lazily (OCR tab only): requires internet for client OCR
 
 == CAVEMAN REMINDER ==
 When resuming in new session:
