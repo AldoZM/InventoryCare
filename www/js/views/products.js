@@ -150,11 +150,11 @@ export async function renderProducts(container, session) {
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
 </head>
 <body>
-  <div class="name">${p.name}</div>
+  <div class="name">${escapeHtml(p.name)}</div>
   <svg id="bc"></svg>
-  <div class="sku">${p.sku}</div>
+  <div class="sku">${escapeHtml(p.sku)}</div>
   <script>
-    JsBarcode('#bc','${p.sku}',{format:'CODE128',width:1.5,height:40,displayValue:false,margin:0});
+    JsBarcode('#bc','${escapeHtml(p.sku)}',{format:'CODE128',width:1.5,height:40,displayValue:false,margin:0});
     setTimeout(()=>window.print(),300);
   <\/script>
 </body>

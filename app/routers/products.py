@@ -74,7 +74,7 @@ def create_product(body: ProductCreate, conn=Depends(get_db), _=Depends(require_
 
 @router.put("/{product_id}")
 def update_product(product_id: int, body: ProductUpdate, conn=Depends(get_db), _=Depends(require_admin)):
-    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    fields = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
     if not fields:
         raise HTTPException(400, "No fields to update")
     set_clause = ", ".join(f"{k}=?" for k in fields)
