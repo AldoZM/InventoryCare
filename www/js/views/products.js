@@ -1,6 +1,15 @@
 import { api } from '../api.js';
 import { modal, confirm, toast, renderTable } from '../components.js';
 import { t } from '../i18n.js';
+import { openScanModal } from '../scan.js';
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 export async function renderProducts(container, session) {
   let products = [];
@@ -10,21 +19,21 @@ export async function renderProducts(container, session) {
       <div class="form-row">
         <div class="form-group">
           <label>${t.products.sku}</label>
-          <input id="f-sku" value="${p.sku || ''}" ${p.id ? 'readonly' : 'required'}>
+          <input id="f-sku" value="${escapeHtml(p.sku || '')}" ${p.id ? 'readonly' : 'required'}>
         </div>
         <div class="form-group">
           <label>${t.products.name}</label>
-          <input id="f-name" value="${p.name || ''}" required>
+          <input id="f-name" value="${escapeHtml(p.name || '')}" required>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label>${t.products.category}</label>
-          <input id="f-cat" value="${p.category || ''}">
+          <input id="f-cat" value="${escapeHtml(p.category || '')}">
         </div>
         <div class="form-group">
           <label>${t.products.unit}</label>
-          <input id="f-unit" value="${p.unit || 'pcs'}" required>
+          <input id="f-unit" value="${escapeHtml(p.unit || 'pcs')}" required>
         </div>
       </div>
       <div class="form-row">
@@ -33,8 +42,14 @@ export async function renderProducts(container, session) {
           <input id="f-min" type="number" min="0" value="${p.min_stock ?? 0}" required>
         </div>
         <div class="form-group">
+          <label>Precio</label>
+          <input id="f-price" type="number" step="0.01" min="0" value="${p.price ?? ''}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
           <label>${t.products.description}</label>
-          <input id="f-desc" value="${p.description || ''}">
+          <input id="f-desc" value="${escapeHtml(p.description || '')}">
         </div>
       </div>`;
   }
@@ -72,6 +87,7 @@ export async function renderProducts(container, session) {
           </select>
         </div>
         <div class="toolbar-right">
+          <button class="btn btn-secondary" id="btn-scan">📷 Escanear</button>
           ${session.role === 'admin' ? `<button class="btn btn-primary" id="btn-new">+ ${t.products.new}</button>` : ''}
         </div>
       </div>
@@ -85,14 +101,38 @@ export async function renderProducts(container, session) {
         { key: 'category',  label: t.products.category },
         { key: 'unit',      label: t.products.unit },
         { key: 'min_stock', label: t.products.minStock },
+        {
+          key: 'price',
+          label: 'Precio',
+          render: p => p.price != null ? `$${Number(p.price).toFixed(2)}` : '—',
+        },
       ],
       visible,
       actions
     );
 
-    document.getElementById('search').addEventListener('input', e => render(e.target.value, document.getElementById('cat-filter').value));
-    document.getElementById('cat-filter').addEventListener('change', e => render(document.getElementById('search').value, e.target.value));
-    document.getElementById('btn-new')?.addEventListener('click', openCreate);
+    document.getElementById('search').addEventListener('input', e =>
+      render(e.target.value, document.getElementById('cat-filter').value));
+    document.getElementById('cat-filter').addEventListener('change', e =>
+      render(document.getElementById('search').value, e.target.value));
+    document.getElementById('btn-new')?.addEventListener('click', () => openCreate());
+    document.getElementById('btn-scan').addEventListener('click', () => {
+      openScanModal(({ found, product, fields }) => {
+        if (found) {
+          if (session.role === 'admin') {
+            openEdit(product);
+          } else {
+            toast(`Producto: ${product.name} (SKU: ${product.sku})`);
+          }
+        } else {
+          if (session.role === 'admin') {
+            openCreate(fields);
+          } else {
+            toast('Producto no encontrado en inventario', 'error');
+          }
+        }
+      });
+    });
   }
 
   function printLabel(p) {
@@ -122,14 +162,15 @@ export async function renderProducts(container, session) {
     win.document.close();
   }
 
-  function openCreate() {
-    modal(`+ ${t.products.new}`, productForm(), async el => {
+  function openCreate(prefill = {}) {
+    modal(`+ ${t.products.new}`, productForm(prefill), async el => {
       const body = {
         sku:         el.querySelector('#f-sku').value.trim(),
         name:        el.querySelector('#f-name').value.trim(),
         category:    el.querySelector('#f-cat').value.trim() || null,
         unit:        el.querySelector('#f-unit').value.trim(),
         min_stock:   +el.querySelector('#f-min').value,
+        price:       el.querySelector('#f-price').value ? +el.querySelector('#f-price').value : null,
         description: el.querySelector('#f-desc').value.trim() || null,
       };
       try {
@@ -148,6 +189,7 @@ export async function renderProducts(container, session) {
         category:    el.querySelector('#f-cat').value.trim() || null,
         unit:        el.querySelector('#f-unit').value.trim(),
         min_stock:   +el.querySelector('#f-min').value,
+        price:       el.querySelector('#f-price').value ? +el.querySelector('#f-price').value : null,
         description: el.querySelector('#f-desc').value.trim() || null,
       };
       try {
