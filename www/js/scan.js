@@ -126,7 +126,7 @@ async function _onBarcodeDecode(code) {
       _onResult({ found: true, product });
       return;
     }
-  } catch {}
+  } catch { _setStatus('Sin conexión al servidor'); }
 
   // 2. External lookup
   let fields = { sku: code, name: '', category: '', price: null };
@@ -196,12 +196,29 @@ function _parseOCRText(text) {
 }
 
 function _showPreview(fields, onUse) {
-  document.getElementById('scan-preview-content').innerHTML = `
-    <div class="scan-preview-field"><span class="scan-preview-label">SKU:</span>${fields.sku || '—'}</div>
-    <div class="scan-preview-field"><span class="scan-preview-label">Nombre:</span>${fields.name || '—'}</div>
-    <div class="scan-preview-field"><span class="scan-preview-label">Categoría:</span>${fields.category || '—'}</div>
-    <div class="scan-preview-field"><span class="scan-preview-label">Precio:</span>${fields.price != null ? '$' + Number(fields.price).toFixed(2) : '—'}</div>
-  `;
+  const content = document.getElementById('scan-preview-content');
+  content.innerHTML = '';
+
+  const rows = [
+    ['SKU', fields.sku || '—'],
+    ['Nombre', fields.name || '—'],
+    ['Categoría', fields.category || '—'],
+    ['Precio', fields.price != null ? '$' + Number(fields.price).toFixed(2) : '—'],
+  ];
+
+  for (const [label, value] of rows) {
+    const row = document.createElement('div');
+    row.className = 'scan-preview-field';
+    const labelEl = document.createElement('span');
+    labelEl.className = 'scan-preview-label';
+    labelEl.textContent = label + ':';
+    const valueEl = document.createElement('span');
+    valueEl.textContent = value;
+    row.appendChild(labelEl);
+    row.appendChild(valueEl);
+    content.appendChild(row);
+  }
+
   document.getElementById('scan-preview').classList.remove('hidden');
   _setStatus('');
 
