@@ -1,5 +1,5 @@
 == INVENTORYCARE — CONTEXT FILE ==
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 Mode: caveman
 
 == WHAT IS PROJECT ==
@@ -61,15 +61,32 @@ www/js/views/products.js — product form + scan button
 tests/                — pytest tests (23 passing)
 
 == NEXT PENDING TASK ==
-1. Mergear PR feature/product-scan a main
-2. Verificar que tests sigan pasando en main
-3. Decidir siguiente feature
+1. Implementar HTTPS + IP local en tray (ver diseño aprobado abajo)
+2. Mergear PR feature/product-scan a main (después de implementar HTTPS)
+3. Verificar que tests sigan pasando en main
 
-== NOTA CÁMARA EN TELÉFONO ==
-getUserMedia requiere HTTPS en IP no-localhost.
-Para pruebas en red local sin HTTPS:
-chrome://flags/#unsafely-treat-insecure-origin-as-secure
-Agregar http://192.168.x.x:PORT a la lista.
+== DISEÑO APROBADO: HTTPS LAN ACCESS (pendiente implementar) ==
+Objetivo: celulares en la misma red WiFi puedan usar la cámara para escanear códigos.
+getUserMedia requiere HTTPS en IPs no-localhost — sin HTTPS el botón 📷 no funciona en cel.
+
+Decisión: UN solo server HTTPS en 0.0.0.0:8080
+- PC abre https://localhost:8080 (aviso cert una vez, luego ok)
+- Celular abre https://192.168.x.x:8080 (aviso cert una vez, luego ok)
+- Cámara funciona en celular después de aceptar cert
+
+Cambios necesarios en launcher.py:
+- Generar cert SSL auto-firmado en primer arranque (cryptography lib, ya instalada via python-jose)
+- Guardar cert.pem + key.pem en AppData/InventaryCare/
+- Regenerar si expirado (válido 1 año)
+- Detectar IP local con socket stdlib
+- Pasar ssl_certfile + ssl_keyfile a uvicorn.run()
+- Agregar item en tray: "Red local: https://192.168.x.x:8080"
+
+Cambios en inventarycare.spec:
+- Agregar hidden imports de cryptography (hazmat.primitives, x509, backends, etc.)
+
+NOTA: aviso "Your connection is not private" es esperado y normal con cert auto-firmado.
+Trabajadores aceptan UNA vez en su cel, después no vuelve a aparecer.
 
 == HOW TO RUN (dev) ==
 cd InventaryCare
