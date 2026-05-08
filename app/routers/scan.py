@@ -17,6 +17,11 @@ try:
 except ImportError:
     _pytesseract_available = False
 
+_OCR_CATEGORIES = [
+    "alimento", "bebida", "limpieza", "higiene", "electrónico",
+    "ropa", "herramienta", "lácteo", "cereal", "snack",
+]
+
 
 def _fetch_openfoodfacts(barcode: str):
     url = (
@@ -31,7 +36,7 @@ def _fetch_openfoodfacts(barcode: str):
             return None
         p = data.get("product", {})
         cats = p.get("categories_tags", [])
-        category = cats[0].replace("en:", "").replace("-", " ").title() if cats else None
+        category = cats[0].split(":", 1)[-1].replace("-", " ").title() if cats else None
         name = p.get("product_name") or None
         return {"name": name, "category": category, "price": None}
     except Exception:
@@ -69,7 +74,7 @@ def _fetch_external(barcode: str):
 
 
 def _parse_ocr_text(text: str):
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
     name = lines[0] if lines else None
 
     price = None
@@ -77,13 +82,9 @@ def _parse_ocr_text(text: str):
     if price_match:
         price = float(price_match.group(1).replace(",", "."))
 
-    CATEGORIES = [
-        "alimento", "bebida", "limpieza", "higiene", "electrónico",
-        "ropa", "herramienta", "lácteo", "cereal", "snack",
-    ]
     category = None
     text_lower = text.lower()
-    for cat in CATEGORIES:
+    for cat in _OCR_CATEGORIES:
         if cat in text_lower:
             category = cat.title()
             break
@@ -118,6 +119,8 @@ async def ocr_image(image: UploadFile = File(...), _=Depends(get_current_user)):
     if not _pytesseract_available:
         raise HTTPException(503, "pytesseract not installed")
     contents = await image.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Image too large (max 10MB)")
     img = _PILImage.open(_io.BytesIO(contents))
     raw_text = pytesseract.image_to_string(img, lang="spa+eng")
     return _parse_ocr_text(raw_text)
