@@ -50,7 +50,6 @@ a = Analysis(
         'cryptography.x509',
         'cryptography.x509.oid',
         'cryptography.hazmat.backends',
-        'cryptography.hazmat.backends.default_backend',
     ],
     hookspath=[],
     hooksconfig={},

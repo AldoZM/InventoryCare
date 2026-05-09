@@ -41,7 +41,7 @@ def _get_local_ip() -> str:
         return "127.0.0.1"
 
 
-def _ensure_ssl_cert(ip: str) -> tuple:
+def _ensure_ssl_cert(ip: str) -> tuple[Path, Path]:
     import datetime
     import ipaddress
     from cryptography import x509
