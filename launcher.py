@@ -40,6 +40,71 @@ def _get_local_ip() -> str:
         return "127.0.0.1"
 
 
+def _ensure_ssl_cert(ip: str):
+    import datetime
+    import ipaddress
+    from cryptography import x509
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.backends import default_backend
+
+    cert_path = _log_dir / "cert.pem"
+    key_path = _log_dir / "key.pem"
+
+    def _needs_regen() -> bool:
+        if not cert_path.exists() or not key_path.exists():
+            return True
+        try:
+            cert = x509.load_pem_x509_certificate(cert_path.read_bytes(), default_backend())
+            if (cert.not_valid_after - datetime.datetime.utcnow()) < datetime.timedelta(days=7):
+                return True
+            san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+            ip_addrs = [str(a) for a in san.value.get_values_for_type(x509.IPAddress)]
+            if ip != "127.0.0.1" and ip not in ip_addrs:
+                return True
+            return False
+        except Exception:
+            return True
+
+    if not _needs_regen():
+        return cert_path, key_path
+
+    _log(f"[ssl] generating self-signed cert for IP {ip}...")
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend(),
+    )
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")])
+    san_list = [
+        x509.DNSName("localhost"),
+        x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+    ]
+    if ip != "127.0.0.1":
+        san_list.append(x509.IPAddress(ipaddress.IPv4Address(ip)))
+    now = datetime.datetime.utcnow()
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=365))
+        .add_extension(x509.SubjectAlternativeName(san_list), critical=False)
+        .sign(private_key, hashes.SHA256(), default_backend())
+    )
+    cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    key_path.write_bytes(private_key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.TraditionalOpenSSL,
+        serialization.NoEncryption(),
+    ))
+    _log(f"[ssl] cert written to {cert_path}")
+    return cert_path, key_path
+
+
 def _load_icon():
     try:
         from PIL import Image, ImageDraw
