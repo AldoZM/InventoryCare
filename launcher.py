@@ -1,4 +1,5 @@
 import os
+import ssl
 import sys
 import threading
 import webbrowser
@@ -10,7 +11,7 @@ import uvicorn
 import pystray
 
 PORT = 8080
-URL = f"http://localhost:{PORT}"
+URL = f"https://localhost:{PORT}"
 
 # When frozen by PyInstaller, resolve bundle root via _MEIPASS
 _BUNDLE = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
@@ -120,14 +121,20 @@ def _load_icon():
         return None
 
 
-def _run_server():
+def _run_server(cert: Path, key: Path):
     try:
         _log("[server] importing app...")
         from app.main import app
         _log("[server] starting uvicorn...")
-        # Disable uvicorn logging when no console (frozen without console window)
         log_cfg = None if not sys.stdout or not hasattr(sys.stdout, 'isatty') else "default"
-        uvicorn.run(app, host="0.0.0.0", port=PORT, log_config=log_cfg)
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=PORT,
+            log_config=log_cfg,
+            ssl_certfile=str(cert),
+            ssl_keyfile=str(key),
+        )
         _log("[server] uvicorn exited")
     except Exception:
         _log("[server] CRASH:\n" + traceback.format_exc())
@@ -142,15 +149,20 @@ def _quit(icon, item):
 
 
 def main():
-    server_thread = threading.Thread(target=_run_server, daemon=True)
+    local_ip = _get_local_ip()
+    cert, key = _ensure_ssl_cert(local_ip)
+
+    server_thread = threading.Thread(target=_run_server, args=(cert, key), daemon=True)
     server_thread.start()
 
-    # Wait until server responds (up to 15s)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
     import urllib.request, urllib.error
     for _ in range(30):
         time.sleep(0.5)
         try:
-            urllib.request.urlopen(f"http://localhost:{PORT}/health", timeout=1)
+            urllib.request.urlopen(f"https://localhost:{PORT}/health", timeout=1, context=ctx)
             _log("[launcher] server ready")
             break
         except Exception:
@@ -160,8 +172,14 @@ def main():
 
     webbrowser.open(URL)
 
+    lan_label = (
+        f"Red local: https://{local_ip}:{PORT}"
+        if local_ip != "127.0.0.1"
+        else "Red local: no detectada"
+    )
     menu = pystray.Menu(
         pystray.MenuItem("Abrir InventaryCare", _open_browser, default=True),
+        pystray.MenuItem(lan_label, None, enabled=False),
         pystray.MenuItem("Salir", _quit),
     )
     img = _load_icon()
