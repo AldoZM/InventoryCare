@@ -126,6 +126,7 @@ def _run_server(cert: Path, key: Path):
         _log("[server] importing app...")
         from app.main import app
         _log("[server] starting uvicorn...")
+        # None disables uvicorn logging when frozen (no console window)
         log_cfg = None if not sys.stdout or not hasattr(sys.stdout, 'isatty') else "default"
         uvicorn.run(
             app,
@@ -158,7 +159,7 @@ def main():
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    import urllib.request, urllib.error
+    import urllib.request
     for _ in range(30):
         time.sleep(0.5)
         try:
