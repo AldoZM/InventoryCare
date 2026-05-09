@@ -26,6 +26,19 @@ def _log(msg: str):
         f.write(msg + "\n")
 
 
+def _get_local_ip() -> str:
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        _log("[launcher] could not detect local IP, defaulting to 127.0.0.1")
+        return "127.0.0.1"
+
+
 def _load_icon():
     try:
         from PIL import Image, ImageDraw
