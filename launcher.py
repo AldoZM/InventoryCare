@@ -30,10 +30,11 @@ def _get_local_ip() -> str:
     import socket
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        finally:
+            s.close()
     except Exception:
         _log("[launcher] could not detect local IP, defaulting to 127.0.0.1")
         return "127.0.0.1"

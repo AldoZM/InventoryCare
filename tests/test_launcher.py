@@ -16,6 +16,8 @@ def test_get_local_ip_fallback_on_error(monkeypatch):
             pass
         def connect(self, *a, **kw):
             raise OSError("network unreachable")
+        def close(self):
+            pass
 
     monkeypatch.setattr(socket, "socket", _BadSocket)
     assert _get_local_ip() == "127.0.0.1"
