@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from app.database import init_db
 from app.migrations import run_migrations, is_first_run, setup_first_run
 from app.routers import auth as auth_router
-from app.routers import users, products, locations, inventory, movements, reports, backup, export, shortcut, scan
+from app.routers import users, products, locations, inventory, movements, reports, backup, export, shortcut, scan, system
 
 
 @asynccontextmanager
@@ -43,6 +43,7 @@ app.include_router(backup.router)
 app.include_router(export.router)
 app.include_router(shortcut.router)
 app.include_router(scan.router)
+app.include_router(system.router)
 
 
 @app.get("/health")
