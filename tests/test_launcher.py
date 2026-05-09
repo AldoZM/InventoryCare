@@ -81,5 +81,5 @@ def test_ensure_ssl_cert_valid_one_year(tmp_path, monkeypatch):
     monkeypatch.setattr("launcher._log_dir", tmp_path)
     cert_path, _ = _ensure_ssl_cert("192.168.1.42")
     cert = x509.load_pem_x509_certificate(cert_path.read_bytes(), default_backend())
-    delta = cert.not_valid_after - cert.not_valid_before
+    delta = cert.not_valid_after_utc - cert.not_valid_before_utc
     assert delta.days >= 364

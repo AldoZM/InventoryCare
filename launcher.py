@@ -40,7 +40,7 @@ def _get_local_ip() -> str:
         return "127.0.0.1"
 
 
-def _ensure_ssl_cert(ip: str):
+def _ensure_ssl_cert(ip: str) -> tuple:
     import datetime
     import ipaddress
     from cryptography import x509
@@ -57,7 +57,7 @@ def _ensure_ssl_cert(ip: str):
             return True
         try:
             cert = x509.load_pem_x509_certificate(cert_path.read_bytes(), default_backend())
-            if (cert.not_valid_after - datetime.datetime.utcnow()) < datetime.timedelta(days=7):
+            if (cert.not_valid_after_utc - datetime.datetime.now(datetime.timezone.utc)) < datetime.timedelta(days=7):
                 return True
             san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
             ip_addrs = [str(a) for a in san.value.get_values_for_type(x509.IPAddress)]
@@ -83,7 +83,7 @@ def _ensure_ssl_cert(ip: str):
     ]
     if ip != "127.0.0.1":
         san_list.append(x509.IPAddress(ipaddress.IPv4Address(ip)))
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
