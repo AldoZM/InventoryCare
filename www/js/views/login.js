@@ -38,6 +38,7 @@ export function renderLogin(container) {
       }
       const data = await res.json();
       setSession({ token: data.access_token, role: data.role, username });
+      sessionStorage.setItem('_login_reload', '1');
       window.location.reload();
     } catch {
       errorEl.classList.remove('hidden');

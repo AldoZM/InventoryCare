@@ -104,6 +104,13 @@ Open http://localhost:8000
 python launcher.py
 (opens browser + tray icon)
 
+== HOW TO REBUILD .EXE ==
+ALWAYS kill process first or dist\ will be locked:
+  Stop-Process -Name "InventaryCare" -Force -ErrorAction SilentlyContinue
+  python -m PyInstaller inventarycare.spec --noconfirm
+Output: dist\InventaryCare\InventaryCare.exe
+NEVER use --distpath workaround. Kill first, build to dist\ directly.
+
 == IMPORTANT DECISIONS ==
 - SQLite not PostgreSQL: target = non-technical users, no server setup
 - One-folder PyInstaller (not onefile): faster startup, easier debug

@@ -135,6 +135,10 @@ initRouter();
 
 window.addEventListener('beforeunload', e => {
   if (!getSession()) return;
+  if (sessionStorage.getItem('_login_reload')) {
+    sessionStorage.removeItem('_login_reload');
+    return;
+  }
   e.preventDefault();
   e.returnValue = '';
   return '';
