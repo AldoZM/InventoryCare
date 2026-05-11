@@ -466,6 +466,18 @@ body {
 .btn-ghost { background: transparent; border: none; color: var(--text-3); font-size: 13px; cursor: pointer; padding: 0; }
 .btn-ghost:hover { color: var(--text-2); }
 
+@media (max-width: 600px) {
+  .tut-card {
+    bottom: 16px;
+    padding: 20px 18px;
+    border-radius: 12px;
+  }
+  .tut-card h2 { font-size: 15px; margin: 8px 0 6px; }
+  .tut-card p  { font-size: 13px; margin-bottom: 16px; }
+  .tut-actions { flex-wrap: wrap; gap: 8px; }
+  .tut-nav { width: 100%; justify-content: flex-end; }
+}
+
 /* ── Settings ── */
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 .settings-card h3 { margin: 0 0 8px; font-size: 15px; color: var(--text-1); }
