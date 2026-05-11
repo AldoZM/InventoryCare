@@ -1,0 +1,128 @@
+== INVENTORYCARE — CONTEXT FILE ==
+Last updated: 2026-05-08
+Mode: caveman
+
+== WHAT IS PROJECT ==
+InventoryCare = inventory management app for small biz.
+Stack: FastAPI (Python) + SQLite + HTML/JS frontend (no framework).
+Runs local. No server needed. Windows .exe target.
+Repo: https://github.com/AldoZM/InventoryCare
+
+== OBJETIVO CLAVE (NO OLVIDAR) ==
+Usuario objetivo = persona NO técnica. No sabe usar terminal. No sabe qué es Python.
+Solo sabe hacer doble-click en un .exe.
+TODAS las pruebas deben hacerse con el .exe compilado (PyInstaller), no con python launcher.py.
+Nunca asumir que el usuario puede correr comandos. El producto final siempre es el .exe.
+
+== REPO STATE ==
+Branch: feature/product-scan (pushed to GitHub, PR pendiente de merge).
+PR URL: https://github.com/AldoZM/InventoryCare/pull/new/feature/product-scan
+main: sin cambios desde a836f40.
+
+== TECH STACK DETAIL ==
+- Backend: FastAPI + SQLite (migrated FROM PostgreSQL)
+- DB connection: sqlite3 + threading.Lock (no pool)
+- Auth: JWT tokens
+- Frontend: vanilla HTML/CSS/JS in /www folder
+- Launcher: launcher.py — pystray system tray icon, opens browser, runs uvicorn
+- Build: PyInstaller (inventarycare.spec) → one-folder bundle
+- Installer: Inno Setup (installer.iss) → .exe installer for Windows
+
+== WHAT WAS BUILT (all features in main) ==
+1. SQLite migration — replaced PostgreSQL, all routers adapted
+2. PyInstaller spec — one-folder Windows bundle
+3. Inno Setup script — .exe installer
+4. Pystray launcher — system tray icon, close confirmation, first-run shortcut offer
+5. First-run tutorial — step-by-step onboarding with spotlight, per-user state
+6. Backup/restore — admin-only settings view, SQLite backup API
+7. Excel export — openpyxl, /api/export endpoint, dashboard button
+8. Charts — Chart.js on dashboard, stock + movements
+9. Filters — category filter in inventory/products/history; date shortcuts in history
+10. Password change — dedicated button for admin in users view
+11. Mobile responsive layout — full UI works on small screens
+12. Desktop shortcut — offered as browser modal on first launch
+
+== WHAT WAS BUILT (feature/product-scan — pendiente merge) ==
+13. Escaneo de cámara para productos:
+    - Campo `price REAL` en products (migration safe para DBs existentes)
+    - app/routers/scan.py: GET /api/scan/sku/{barcode}, GET /api/scan/lookup/{barcode}, POST /api/scan/ocr
+    - www/js/scan.js: modal cámara, flujo barcode + OCR, XSS-safe (DOM APIs en preview)
+    - www/js/views/products.js: botón 📷 Escanear, campo Precio, escapeHtml en form
+    - www/js/html5-qrcode.min.js: bundled local (375KB, offline)
+    - pytesseract en requirements.txt (opcional, server-side OCR)
+    - 23 tests pasando
+
+== FILES THAT MATTER ==
+app/database.py       — SQLite connection + Lock + init_db
+app/migrations.py     — schema migrations (incluye price column)
+app/routers/          — auth, products, inventory, movements, reports, locations, users, scan
+app/routers/scan.py   — scan endpoints (NEW)
+launcher.py           — system tray + uvicorn + first-run logic
+inventarycare.spec    — PyInstaller config
+installer.iss         — Inno Setup config
+www/                  — all frontend HTML/JS/CSS
+www/js/scan.js        — scan modal module (NEW)
+www/js/html5-qrcode.min.js — bundled library (NEW)
+www/js/views/products.js — product form + scan button
+tests/                — pytest tests (23 passing)
+
+== NEXT PENDING TASK ==
+1. Implementar HTTPS + IP local en tray (ver diseño aprobado abajo)
+2. Mergear PR feature/product-scan a main (después de implementar HTTPS)
+3. Verificar que tests sigan pasando en main
+
+== DISEÑO APROBADO: HTTPS LAN ACCESS (pendiente implementar) ==
+Objetivo: celulares en la misma red WiFi puedan usar la cámara para escanear códigos.
+getUserMedia requiere HTTPS en IPs no-localhost — sin HTTPS el botón 📷 no funciona en cel.
+
+Decisión: UN solo server HTTPS en 0.0.0.0:8080
+- PC abre https://localhost:8080 (aviso cert una vez, luego ok)
+- Celular abre https://192.168.x.x:8080 (aviso cert una vez, luego ok)
+- Cámara funciona en celular después de aceptar cert
+
+Cambios necesarios en launcher.py:
+- Generar cert SSL auto-firmado en primer arranque (cryptography lib, ya instalada via python-jose)
+- Guardar cert.pem + key.pem en AppData/InventaryCare/
+- Regenerar si expirado (válido 1 año)
+- Detectar IP local con socket stdlib
+- Pasar ssl_certfile + ssl_keyfile a uvicorn.run()
+- Agregar item en tray: "Red local: https://192.168.x.x:8080"
+
+Cambios en inventarycare.spec:
+- Agregar hidden imports de cryptography (hazmat.primitives, x509, backends, etc.)
+
+NOTA: aviso "Your connection is not private" es esperado y normal con cert auto-firmado.
+Trabajadores aceptan UNA vez en su cel, después no vuelve a aparecer.
+
+== HOW TO RUN (dev) ==
+cd InventaryCare
+venv\Scripts\activate
+uvicorn app.main:app --reload
+Open http://localhost:8000
+
+== HOW TO RUN (launcher) ==
+python launcher.py
+(opens browser + tray icon)
+
+== HOW TO REBUILD .EXE ==
+ALWAYS kill process first or dist\ will be locked:
+  Stop-Process -Name "InventaryCare" -Force -ErrorAction SilentlyContinue
+  python -m PyInstaller inventarycare.spec --noconfirm
+Output: dist\InventaryCare\InventaryCare.exe
+NEVER use --distpath workaround. Kill first, build to dist\ directly.
+
+== IMPORTANT DECISIONS ==
+- SQLite not PostgreSQL: target = non-technical users, no server setup
+- One-folder PyInstaller (not onefile): faster startup, easier debug
+- Vanilla JS: no React/Vue, keep simple for small app
+- pystray: needed for Windows tray icon without extra deps
+- html5-qrcode bundled local (not CDN): offline use in installer
+- pytesseract optional: app works without it, OCR server returns 503 gracefully
+- Tesseract.js loaded from CDN lazily (OCR tab only): requires internet for client OCR
+
+== CAVEMAN REMINDER ==
+When resuming in new session:
+1. git fetch --all && git log --oneline origin/main -5   (check current state)
+2. Read this file
+3. Pick next task from NEXT PENDING TASK section
+4. Update this file when session ends

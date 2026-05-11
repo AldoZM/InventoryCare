@@ -46,11 +46,16 @@ function _render() {
     const el = document.querySelector(step.target);
     if (el) {
       const r = el.getBoundingClientRect();
-      _spot = document.createElement('div');
-      _spot.className = 'tut-spot';
-      _spot.style.cssText =
-        `top:${r.top - 6}px;left:${r.left - 6}px;width:${r.width + 12}px;height:${r.height + 12}px;`;
-      document.body.appendChild(_spot);
+      const inViewport = r.width > 0 && r.height > 0 &&
+        r.top >= 0 && r.left >= 0 &&
+        r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+      if (inViewport) {
+        _spot = document.createElement('div');
+        _spot.className = 'tut-spot';
+        _spot.style.cssText =
+          `top:${r.top - 6}px;left:${r.left - 6}px;width:${r.width + 12}px;height:${r.height + 12}px;`;
+        document.body.appendChild(_spot);
+      }
     }
   }
 

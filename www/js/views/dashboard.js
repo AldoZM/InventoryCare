@@ -15,6 +15,11 @@ export async function renderDashboard(container) {
   container.innerHTML = `<p class="no-data">${t.common.loading}</p>`;
 
   async function load() {
+    if (window.location.hash !== '#/dashboard') {
+      clearInterval(_refreshTimer);
+      _refreshTimer = null;
+      return;
+    }
     if (_chartStock) { _chartStock.destroy(); _chartStock = null; }
     if (_chartMov)   { _chartMov.destroy();   _chartMov = null; }
 
