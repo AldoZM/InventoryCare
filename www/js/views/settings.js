@@ -1,9 +1,49 @@
 import { toast } from '../components.js';
 import { getSession } from '../session.js';
 
+function _loadQrLib() {
+  return new Promise((resolve) => {
+    if (typeof QRCode !== 'undefined') { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = '/js/qrcode.min.js';
+    s.onload = resolve;
+    s.onerror = resolve;
+    document.head.appendChild(s);
+  });
+}
+
+async function _renderQrCard() {
+  await _loadQrLib();
+  try {
+    const res = await fetch('/api/system/lan-url');
+    const { url, lan_ip } = await res.json();
+    const container = document.getElementById('qr-container');
+    const textEl = document.getElementById('lan-url-text');
+    if (url && typeof QRCode !== 'undefined') {
+      new QRCode(container, { text: url, width: 150, height: 150 });
+      textEl.textContent = url;
+    } else if (url) {
+      container.textContent = '';
+      textEl.textContent = url;
+    } else {
+      container.textContent = 'No conectado a red local. Conecta la computadora a una red WiFi.';
+    }
+  } catch {
+    const container = document.getElementById('qr-container');
+    if (container) container.textContent = 'Error al obtener dirección de red.';
+  }
+}
+
 export function renderSettings(container) {
   container.innerHTML = `
     <div class="settings-grid">
+
+      <div class="card settings-card">
+        <h3>📱 Acceso desde teléfono</h3>
+        <p>Escanea este código con la cámara de tu celular para abrir InventaryCare en tu teléfono.</p>
+        <div id="qr-container" style="margin:16px 0;min-height:40px"></div>
+        <div id="lan-url-text" style="font-size:12px;color:var(--text-2);word-break:break-all"></div>
+      </div>
 
       <div class="card settings-card">
         <h3>Backup de base de datos</h3>
@@ -25,13 +65,14 @@ export function renderSettings(container) {
 
     </div>`;
 
+  _renderQrCard();
+
   // Backup
   document.getElementById('btn-backup').addEventListener('click', () => {
     const s = getSession();
     const a = document.createElement('a');
     a.href = '/api/backup';
     a.download = 'inventarycare_backup.db';
-    // Pass token via query param not possible with FileResponse auth — use fetch
     fetch('/api/backup', { headers: { Authorization: `Bearer ${s.token}` } })
       .then(r => {
         if (!r.ok) throw new Error('Error al generar backup');

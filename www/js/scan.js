@@ -4,10 +4,14 @@ let _scanner = null;
 let _stream = null;
 let _onResult = null;
 let _tesseractLoaded = false;
+let _hashChangeHandler = null;
 
 export function openScanModal(onResult) {
   _onResult = onResult;
   document.body.insertAdjacentHTML('beforeend', _buildHTML());
+
+  _hashChangeHandler = () => _closeModal();
+  window.addEventListener('hashchange', _hashChangeHandler);
 
   const overlay = document.getElementById('scan-overlay');
   document.getElementById('scan-close').addEventListener('click', _closeModal);
@@ -79,7 +83,8 @@ async function _startBarcodeScanner() {
       () => {}
     );
   } catch (e) {
-    _setStatus('Sin acceso a cámara: ' + e.message);
+    _scanner = null;
+    _setStatus('Sin acceso a cámara: ' + (e.message || String(e)));
   }
 }
 
@@ -236,6 +241,10 @@ function _setStatus(msg) {
 }
 
 async function _closeModal() {
+  if (_hashChangeHandler) {
+    window.removeEventListener('hashchange', _hashChangeHandler);
+    _hashChangeHandler = null;
+  }
   await _stopAll();
   document.getElementById('scan-overlay')?.remove();
 }

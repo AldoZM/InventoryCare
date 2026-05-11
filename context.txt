@@ -8,6 +8,12 @@ Stack: FastAPI (Python) + SQLite + HTML/JS frontend (no framework).
 Runs local. No server needed. Windows .exe target.
 Repo: https://github.com/AldoZM/InventoryCare
 
+== OBJETIVO CLAVE (NO OLVIDAR) ==
+Usuario objetivo = persona NO técnica. No sabe usar terminal. No sabe qué es Python.
+Solo sabe hacer doble-click en un .exe.
+TODAS las pruebas deben hacerse con el .exe compilado (PyInstaller), no con python launcher.py.
+Nunca asumir que el usuario puede correr comandos. El producto final siempre es el .exe.
+
 == REPO STATE ==
 Branch: feature/product-scan (pushed to GitHub, PR pendiente de merge).
 PR URL: https://github.com/AldoZM/InventoryCare/pull/new/feature/product-scan
